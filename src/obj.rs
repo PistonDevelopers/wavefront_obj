@@ -949,7 +949,10 @@ f 45 41 44 48
 }
 
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
-/// file, or an error.
-pub fn parse(input: &str) -> result::Result<ObjSet, ParseError> {
+/// file, or an error. Support in this parser for the full file format is
+/// best-effort and realistically I will only end up supporting the subset
+/// of the file format which falls under the "shit I see exported from blender"
+/// category.
+pub fn parse(input: &str) -> Result<ObjSet, ParseError> {
   Parser::new(input).parse_objset()
 }
