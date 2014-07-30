@@ -1,0 +1,12 @@
+[package]
+
+name = "wavefront-obj"
+version = "0.0.0"
+authors = [
+    "Clark Gaebel <cg.wowus.cg@gmail.com>",
+  ]
+
+[[lib]]
+
+name = "wavefront-obj"
+path = "./src/obj.rs"
