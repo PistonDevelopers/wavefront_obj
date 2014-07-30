@@ -204,3 +204,17 @@ fn test_next_word() {
   assert_eq!(l.current_line_number, 4);
   assert_eq!(l.next_word(), None);
 }
+
+#[test]
+fn test_simd() {
+  use std::simd;
+
+  let x = simd::f32x4(1.0,2.0,3.0,4.0);
+
+  let simd::f32x4(a, b, c, d) = x;
+
+  assert_eq!(a, 1.0);
+  assert_eq!(b, 2.0);
+  assert_eq!(c, 3.0);
+  assert_eq!(d, 4.0);
+}
