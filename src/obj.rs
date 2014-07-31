@@ -66,9 +66,9 @@ fn fuzzy_cmp(x: f64, y: f64, delta: f64) -> Ordering {
   if (x - y).abs() <= delta {
     Equal
   } else if x < y {
-    Greater
-  } else {
     Less
+  } else {
+    Greater
   }
 }
 
