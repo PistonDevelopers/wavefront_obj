@@ -155,7 +155,7 @@ impl<'a> Parser<'a> {
     // just be using slices into the underlying buffer instead of allocating a
     // new string for every single token. Unfortunately, I'm not sure how to
     // structure this to appease the borrow checker.
-    let ret = self.lexer.next().map(|s| s.clone());
+    let ret = self.lexer.next();
 
     match ret {
       None => {},
