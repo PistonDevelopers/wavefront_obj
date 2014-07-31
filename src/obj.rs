@@ -746,8 +746,9 @@ f 45 41 44 48
 /// best-effort and realistically I will only end up supporting the subset
 /// of the file format which falls under the "shit I see exported from blender"
 /// category.
-pub fn parse(input: String) -> Result<ObjSet, ParseError> {
+pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
   // way I could find to allow non-trailing newlines.
-  Parser::new(input.append("\n").as_slice()).parse_objset()
+  input.push_str("\n");
+  Parser::new(input.as_slice()).parse_objset()
 }
