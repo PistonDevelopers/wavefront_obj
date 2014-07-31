@@ -100,8 +100,9 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
   }
 }
 
-/// Blender exports shapes as a list of the verticies representing their corner.
-/// This function turns that into a set of OpenGL-usable shapes.
+/// Blender exports shapes as a list of the verticies representing their corners.
+/// This function turns that into a set of OpenGL-usable shapes - i.e. points,
+/// lines, or triangles.
 fn to_triangles(xs: &[VertexIndex]) -> Vec<Shape> {
   match xs.len() {
     0 => return vec!(),
