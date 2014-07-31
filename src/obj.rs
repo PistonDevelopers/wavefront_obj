@@ -131,14 +131,14 @@ fn test_to_triangles() {
 
 struct Parser<'a> {
   line_number: uint,
-  lexer: iter::Peekable<String, iter::Fuse<Lexer<'a>>>,
+  lexer: iter::Peekable<String, Lexer<'a>>,
 }
 
 impl<'a> Parser<'a> {
   fn new<'a>(input: &'a str) -> Parser<'a> {
     Parser {
       line_number: 1,
-      lexer: Lexer::new(input).fuse().peekable(),
+      lexer: Lexer::new(input).peekable(),
     }
   }
 
