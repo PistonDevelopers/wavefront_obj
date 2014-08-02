@@ -9,4 +9,4 @@ authors = [
 [[lib]]
 
 name = "wavefront-obj"
-path = "./src/wavefront.rs"
+path = "./src/lib.rs"
