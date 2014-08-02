@@ -64,7 +64,7 @@ pub struct Vertex {
   pub z: f64,
 }
 
-/// A single 2-dimensional point on a texture.
+/// A single 2-dimensional point on a texture. "Texure Vertex".
 #[allow(missing_doc)]
 #[deriving(Clone, Copy, Show)]
 pub struct TVertex {
@@ -72,10 +72,10 @@ pub struct TVertex {
   pub y: f64,
 }
 
-fn fuzzy_cmp(x: f64, y: f64, delta: f64) -> Ordering {
-  if (x - y).abs() <= delta {
+fn fuzzy_cmp(a: f64, b: f64, delta: f64) -> Ordering {
+  if (a - b).abs() <= delta {
     Equal
-  } else if x < y {
+  } else if a < b {
     Less
   } else {
     Greater

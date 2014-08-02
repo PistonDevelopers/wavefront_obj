@@ -45,22 +45,22 @@ pub struct Color {
   pub b: f64,
 }
 
-fn fuzzy_cmp(x: f64, y: f64, delta: f64) -> Ordering {
-  if (x - y).abs() <= delta {
+fn fuzzy_cmp(a: f64, b: f64, delta: f64) -> Ordering {
+  if (a - b).abs() <= delta {
     Equal
-  } else if x < y {
+  } else if a < b {
     Less
   } else {
     Greater
   }
 }
 
-fn fuzzy_opt_cmp(x: Option<f64>, y: Option<f64>, delta: f64) -> Ordering {
-  match (x, y) {
+fn fuzzy_opt_cmp(a: Option<f64>, b: Option<f64>, delta: f64) -> Ordering {
+  match (a, b) {
     (None, None) => Equal,
     (Some(_), None) => Greater,
     (None, Some(_)) => Less,
-    (Some(x), Some(y)) => fuzzy_cmp(x, y, delta),
+    (Some(a), Some(b)) => fuzzy_cmp(a, b, delta),
   }
 }
 
