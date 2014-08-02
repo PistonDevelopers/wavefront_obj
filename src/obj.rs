@@ -1,7 +1,6 @@
 //! A parser for Wavefront's `.obj` file format for storing 3D meshes.
 use std::iter;
 use std::mem;
-use std::result;
 use std::result::{Result,Ok,Err};
 
 use lex::{ParseError,Lexer};
@@ -23,6 +22,9 @@ pub struct Object {
   /// The set of verticies this object is composed of. These are referenced
   /// by index in `faces`.
   pub verticies: Vec<Vertex>,
+  /// The set of texture verticies referenced by this object. The actual
+  /// verticies are indexed by the second element in a `VTIndex`.
+  pub tex_verticies: Vec<TVertex>,
   /// A set of shapes (with materials applied to them) of which this object is
   // composed.
   pub geometry: Vec<Geometry>,
@@ -46,11 +48,11 @@ pub struct Geometry {
 #[deriving(Clone, Show, Hash, PartialEq)]
 pub enum Shape {
   /// A point specified by its position.
-  Point(VertexIndex),
+  Point(VTIndex),
   /// A line specified by its endpoints.
-  Line(VertexIndex, VertexIndex),
+  Line(VTIndex, VTIndex),
   /// A triangle specified by its three verticies.
-  Triangle(VertexIndex, VertexIndex, VertexIndex),
+  Triangle(VTIndex, VTIndex, VTIndex),
 }
 
 /// A single 3-dimensional point on the corner of an object.
@@ -60,6 +62,14 @@ pub struct Vertex {
   pub x: f64,
   pub y: f64,
   pub z: f64,
+}
+
+/// A single 2-dimensional point on a texture.
+#[allow(missing_doc)]
+#[deriving(Clone, Copy, Show)]
+pub struct TVertex {
+  pub x: f64,
+  pub y: f64,
 }
 
 fn fuzzy_cmp(x: f64, y: f64, delta: f64) -> Ordering {
@@ -87,10 +97,34 @@ impl PartialOrd for Vertex {
   }
 }
 
+impl PartialEq for TVertex {
+  fn eq(&self, other: &TVertex) -> bool {
+    self.partial_cmp(other).unwrap() == Equal
+  }
+}
+
+impl PartialOrd for TVertex {
+  fn partial_cmp(&self, other: &TVertex) -> Option<Ordering> {
+    Some(fuzzy_cmp(self.x, other.x, 0.00001)
+      .cmp(&fuzzy_cmp(self.y, other.y, 0.00001)))
+  }
+}
+
 /// An index into the `verticies` array of an object, representing a vertex in
 /// the mesh. After parsing, this is guaranteed to be a valid index into the
 /// array, so unchecked indexing may be used.
 pub type VertexIndex = uint;
+
+/// An index into the `texture vertex` array of an object.
+///
+/// Unchecked indexing may be used, because the values are guaranteed to be in
+/// range by the parser.
+pub type TextureIndex = uint;
+
+/// An index into the vertex array, with an optional index into the texture
+/// array. This is used to define the corners of shapes which may or may not
+/// be textured.
+pub type VTIndex = (VertexIndex, Option<TextureIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
@@ -103,7 +137,7 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 /// Blender exports shapes as a list of the verticies representing their corners.
 /// This function turns that into a set of OpenGL-usable shapes - i.e. points,
 /// lines, or triangles.
-fn to_triangles(xs: &[VertexIndex]) -> Vec<Shape> {
+fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
   match xs.len() {
     0 => return vec!(),
     1 => return vec!(Point(xs[0])),
@@ -123,11 +157,76 @@ fn to_triangles(xs: &[VertexIndex]) -> Vec<Shape> {
 #[test]
 fn test_to_triangles() {
   assert_eq!(to_triangles(&[]), vec!());
-  assert_eq!(to_triangles(&[3]), vec!(Point(3)));
-  assert_eq!(to_triangles(&[1,2]), vec!(Line(1,2)));
-  assert_eq!(to_triangles(&[1,2,3]), vec!(Triangle(3,1,2)));
-  assert_eq!(to_triangles(&[1,2,3,4]), vec!(Triangle(4,1,2),Triangle(4,2,3)));
-  assert_eq!(to_triangles(&[1,2,3,4,5]), vec!(Triangle(5,1,2),Triangle(5,2,3),Triangle(5,3,4)));
+
+  assert_eq!(to_triangles(&[(3,None)]), vec!(Point((3,None))));
+
+  assert_eq!(
+    to_triangles(&[
+      (1,None)
+      ,(2,None)
+    ]),
+    vec!(
+      Line(
+        (1,None),
+        (2,None)
+      )
+    ));
+
+  assert_eq!(
+    to_triangles(&[
+      (1,None),
+      (2,None),
+      (3,None)
+    ]),
+    vec!(
+      Triangle(
+        (3,None),
+        (1,None),
+        (2,None)
+      )
+    ));
+
+  assert_eq!(
+    to_triangles(&[
+      (1,None),
+      (2,None),
+      (3,None),
+      (4,None)
+    ]),
+    vec!(
+      Triangle(
+        (4,None),
+        (1,None),
+        (2,None)),
+      Triangle(
+        (4,None),
+        (2,None),
+        (3,None)
+      )
+    ));
+
+  assert_eq!(
+    to_triangles(&[
+      (1,None),
+      (2,None),
+      (3,None),
+      (4,None),
+      (5,None)
+    ]), vec!(
+      Triangle(
+        (5,None),
+        (1,None),
+        (2,None)),
+      Triangle(
+        (5,None),
+        (2,None),
+        (3,None)),
+      Triangle(
+        (5,None),
+        (3,None),
+        (4,None)
+      )
+    ));
 }
 
 struct Parser<'a> {
@@ -144,7 +243,7 @@ impl<'a> Parser<'a> {
   }
 
   fn error<A>(&self, msg: String) -> Result<A, ParseError> {
-    result::Err(ParseError {
+    Err(ParseError {
       line_number: self.line_number,
       message:     msg,
     })
@@ -291,6 +390,41 @@ impl<'a> Parser<'a> {
     Ok(result)
   }
 
+  fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
+    match sliced(&self.next()) {
+      None =>
+        return self.error("Expected `vt` but got end of input.".into_string()),
+      Some("vt") =>
+        {},
+      Some(s) =>
+        return self.error(format!("Expected `vt` but got {}.", s)),
+    }
+
+    let x = try!(self.parse_double());
+    let y = try!(self.parse_double());
+
+    Ok(TVertex { x: x, y: y })
+  }
+
+  /// BUG: Also munches trailing whitespace.
+  fn parse_tex_verticies(&mut self) -> Result<Vec<TVertex>, ParseError> {
+    let mut result = Vec::new();
+
+    loop {
+      match sliced(&self.peek()) {
+        Some("vt") => {
+          let v = try!(self.parse_tex_vertex());
+          result.push(v);
+        },
+        _ => break,
+      }
+
+      try!(self.one_or_more_newlines());
+    }
+
+    Ok(result)
+  }
+
   fn parse_usemtl(&mut self) -> Result<String, ParseError> {
     match sliced(&self.next()) {
       Some("usemtl") => {},
@@ -319,26 +453,48 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_int(&mut self) -> Result<int, ParseError> {
+  fn parse_int_from(&mut self, s: &str) -> Result<int, ParseError> {
+    match from_str::<int>(s) {
+      None =>
+        return self.error(format!("Expected int but got {}.", s)),
+      Some(ret) =>
+        Ok(ret)
+    }
+  }
+
+  fn parse_vtindex(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<VTIndex, ParseError> {
     match sliced(&self.next()) {
       None =>
-        return self.error("Expected int but got end of input.".into_string()),
+        return self.error("Expected vertex index but got end of input.".into_string()),
       Some(s) => {
-        match from_str::<int>(s) {
-          None =>
-            return self.error(format!("Expected int but got {}.", s)),
-          Some(ret) =>
-            Ok(ret)
+        let splits: Vec<&str> = s.split('/').collect();
+        assert!(splits.len() != 0);
+
+        match splits.len() {
+          1 => {
+            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
+            Ok((v_idx, None))
+          },
+          2 => {
+            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
+            let t_idx = try!(self.parse_int_from(splits[1]));
+            let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
+            Ok((v_idx, Some(t_idx)))
+          },
+          n =>
+            self.error(format!("Expected at most 2 vertex indexes but got {}.", n)),
         }
       }
     }
   }
 
-  /// `valid_verticies` is a range of valid verticies, in the range [min, max).
-  fn parse_vertex_index(&mut self, valid_verticies: (uint, uint)) -> Result<VertexIndex, ParseError> {
-    let mut x : int = try!(self.parse_int());
+  /// `valid_values` is a range of valid bounds for the actual value.
+  fn check_valid_index(&self, valid_values: (uint, uint), actual_value: int) -> Result<uint, ParseError> {
+    let (min, max) = valid_values;
 
-    let (min, max) = valid_verticies;
+    let mut x = actual_value;
 
     // Handle negative vertex indexes.
     if x < 0 {
@@ -349,11 +505,11 @@ impl<'a> Parser<'a> {
       assert!(x > 0);
       Ok((x - min as int) as uint)
     } else {
-      self.error(format!("Expected vertex in the range [{}, {}), but got {}.", min, max, x))
+      self.error(format!("Expected index in the range [{}, {}), but got {}.", min, max, actual_value))
     }
   }
 
-  fn parse_face(&mut self, valid_verticies: (uint, uint)) -> Result<Vec<Shape>, ParseError> {
+  fn parse_face(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
@@ -363,20 +519,20 @@ impl<'a> Parser<'a> {
 
     let mut corner_list = Vec::new();
 
-    corner_list.push(try!(self.parse_vertex_index(valid_verticies)));
+    corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx)));
 
     loop {
       match sliced(&self.peek()) {
         None       => break,
         Some("\n") => break,
-        Some( _  ) => corner_list.push(try!(self.parse_vertex_index(valid_verticies))),
+        Some( _  ) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx))),
       }
     }
 
     Ok(to_triangles(corner_list.as_slice()))
   }
 
-  fn parse_geometries(&mut self, valid_verticies: (uint, uint)) -> Result<Vec<Geometry>, ParseError> {
+  fn parse_geometries(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<Vec<Geometry>, ParseError> {
     let mut result = Vec::new();
     let mut shapes = Vec::new();
 
@@ -410,7 +566,7 @@ impl<'a> Parser<'a> {
           })
         },
         Some("f") | Some("l") => {
-          shapes.push_all(try!(self.parse_face(valid_verticies)).as_slice());
+          shapes.push_all(try!(self.parse_face(valid_vtx, valid_tx)).as_slice());
         },
         _ => break,
       }
@@ -427,18 +583,33 @@ impl<'a> Parser<'a> {
     Ok(result.move_iter().filter(|ref x| !x.shapes.is_empty()).collect())
   }
 
-  fn parse_object(&mut self, min_vertex_index: &mut uint, max_vertex_index: &mut uint) -> Result<Object, ParseError> {
-    let name      = try!(self.parse_object_name());
+  fn parse_object(&mut self,
+      min_vertex_index: &mut uint,
+      max_vertex_index: &mut uint,
+      min_tex_index:    &mut uint,
+      max_tex_index:    &mut uint) -> Result<Object, ParseError> {
+    let name = try!(self.parse_object_name());
     try!(self.one_or_more_newlines());
-    let verticies = try!(self.parse_verticies());
+
+    let verticies     = try!(self.parse_verticies());
+    let tex_verticies = try!(self.parse_tex_verticies());
+
     *max_vertex_index += verticies.len();
-    let geometry  = try!(self.parse_geometries((*min_vertex_index, *max_vertex_index)));
+    *max_tex_index    += tex_verticies.len();
+
+    let geometry =
+      try!(self.parse_geometries(
+        (*min_vertex_index, *max_vertex_index),
+        (*min_tex_index, *max_tex_index)));
+
     *min_vertex_index += verticies.len();
+    *min_tex_index    += tex_verticies.len();
 
     Ok(Object {
-      name:      name,
-      verticies: verticies,
-      geometry:  geometry,
+      name:          name,
+      verticies:     verticies,
+      tex_verticies: tex_verticies,
+      geometry:      geometry,
     })
   }
 
@@ -447,10 +618,16 @@ impl<'a> Parser<'a> {
 
     let mut min_vertex_index = 1;
     let mut max_vertex_index = 1;
+    let mut min_tex_index    = 1;
+    let mut max_tex_index    = 1;
 
     loop {
       match sliced(&self.peek()) {
-        Some("o") => result.push(try!(self.parse_object(&mut min_vertex_index, &mut max_vertex_index))),
+        Some("o") => result.push(try!(self.parse_object(
+                      &mut min_vertex_index,
+                      &mut max_vertex_index,
+                      &mut min_tex_index,
+                      &mut max_tex_index))),
         _         => break,
       }
     }
@@ -605,23 +782,24 @@ f 45 41 44 48
             Vertex { x: 1.0, y: 1.0, z: -1.0 },
             Vertex { x: 1.0, y: 1.0, z: 1.0 }
           ),
+          tex_verticies: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("None".into_string()),
               use_smooth_shading: false,
               shapes: vec!(
-                Triangle(0, 4, 5),
-                Triangle(0, 5, 1),
-                Triangle(1, 5, 6),
-                Triangle(1, 6, 2),
-                Triangle(2, 6, 7),
-                Triangle(2, 7, 3),
-                Triangle(3, 7, 4),
-                Triangle(3, 4, 0),
-                Triangle(3, 0, 1),
-                Triangle(3, 1, 2),
-                Triangle(4, 7, 6),
-                Triangle(4, 6, 5),
+                Triangle((0, None), (4, None), (5, None)),
+                Triangle((0, None), (5, None), (1, None)),
+                Triangle((1, None), (5, None), (6, None)),
+                Triangle((1, None), (6, None), (2, None)),
+                Triangle((2, None), (6, None), (7, None)),
+                Triangle((2, None), (7, None), (3, None)),
+                Triangle((3, None), (7, None), (4, None)),
+                Triangle((3, None), (4, None), (0, None)),
+                Triangle((3, None), (0, None), (1, None)),
+                Triangle((3, None), (1, None), (2, None)),
+                Triangle((4, None), (7, None), (6, None)),
+                Triangle((4, None), (6, None), (5, None)),
               )
             }
           )
@@ -662,43 +840,44 @@ f 45 41 44 48
             Vertex { x: 0.382682, y: 0.0, z: -0.92388 },
             Vertex { x: 0.195089, y: 0.0, z: -0.980786 }
           ),
+          tex_verticies: vec!(),
           geometry: vec!(
             Geometry {
               material_name: None,
               use_smooth_shading: false,
               shapes: vec!(
-                Line(1, 0),
-                Line(2, 1),
-                Line(3, 2),
-                Line(4, 3),
-                Line(5, 4),
-                Line(6, 5),
-                Line(7, 6),
-                Line(8, 7),
-                Line(9, 8),
-                Line(10, 9),
-                Line(11, 10),
-                Line(12, 11),
-                Line(13, 12),
-                Line(14, 13),
-                Line(15, 14),
-                Line(16, 15),
-                Line(17, 16),
-                Line(18, 17),
-                Line(19, 18),
-                Line(20, 19),
-                Line(21, 20),
-                Line(22, 21),
-                Line(23, 22),
-                Line(24, 23),
-                Line(25, 24),
-                Line(26, 25),
-                Line(27, 26),
-                Line(28, 27),
-                Line(29, 28),
-                Line(30, 29),
-                Line(31, 30),
-                Line(0, 31),
+                Line((1, None), (0, None)),
+                Line((2, None), (1, None)),
+                Line((3, None), (2, None)),
+                Line((4, None), (3, None)),
+                Line((5, None), (4, None)),
+                Line((6, None), (5, None)),
+                Line((7, None), (6, None)),
+                Line((8, None), (7, None)),
+                Line((9, None), (8, None)),
+                Line((10, None), (9, None)),
+                Line((11, None), (10, None)),
+                Line((12, None), (11, None)),
+                Line((13, None), (12, None)),
+                Line((14, None), (13, None)),
+                Line((15, None), (14, None)),
+                Line((16, None), (15, None)),
+                Line((17, None), (16, None)),
+                Line((18, None), (17, None)),
+                Line((19, None), (18, None)),
+                Line((20, None), (19, None)),
+                Line((21, None), (20, None)),
+                Line((22, None), (21, None)),
+                Line((23, None), (22, None)),
+                Line((24, None), (23, None)),
+                Line((25, None), (24, None)),
+                Line((26, None), (25, None)),
+                Line((27, None), (26, None)),
+                Line((28, None), (27, None)),
+                Line((29, None), (28, None)),
+                Line((30, None), (29, None)),
+                Line((31, None), (30, None)),
+                Line((0, None), (31, None)),
               )
             }
           )
@@ -715,28 +894,128 @@ f 45 41 44 48
             Vertex { x: -1.0, y: 1.0, z: 1.0 },
             Vertex { x: -1.0, y: 1.0, z: -1.0 }
           ),
+          tex_verticies: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("Material".into_string()),
               use_smooth_shading: false,
               shapes: vec!(
-                Triangle(3, 0, 1),
-                Triangle(3, 1, 2),
-                Triangle(5, 4, 7),
-                Triangle(5, 7, 6),
-                Triangle(1, 0, 4),
-                Triangle(1, 4, 5),
-                Triangle(2, 1, 5),
-                Triangle(2, 5, 6),
-                Triangle(3, 2, 6),
-                Triangle(3, 6, 7),
-                Triangle(7, 4, 0),
-                Triangle(7, 0, 3),
+                Triangle((3, None), (0, None), (1, None)),
+                Triangle((3, None), (1, None), (2, None)),
+                Triangle((5, None), (4, None), (7, None)),
+                Triangle((5, None), (7, None), (6, None)),
+                Triangle((1, None), (0, None), (4, None)),
+                Triangle((1, None), (4, None), (5, None)),
+                Triangle((2, None), (1, None), (5, None)),
+                Triangle((2, None), (5, None), (6, None)),
+                Triangle((3, None), (2, None), (6, None)),
+                Triangle((3, None), (6, None), (7, None)),
+                Triangle((7, None), (4, None), (0, None)),
+                Triangle((7, None), (0, None), (3, None)),
               )
             }
           )
         }
       )
+    });
+
+  assert_eq!(parse(test_case.into_string()), expected);
+}
+
+#[test]
+fn test_cube() {
+  let test_case =
+r#"
+# Blender v2.71 (sub 0) OBJ File: 'cube.blend'
+# www.blender.org
+mtllib cube.mtl
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952 0.498633
+vt 0.754996 0.498236
+vt 0.755393 0.248279
+vt 1.005349 0.248677
+vt 0.255083 0.497442
+vt 0.255480 0.247485
+vt 0.505437 0.247882
+vt 0.505039 0.497839
+vt 0.754598 0.748193
+vt 0.504642 0.747795
+vt 0.505834 -0.002074
+vt 0.755790 -0.001677
+vt 0.005127 0.497044
+vt 0.005524 0.247088
+usemtl Material
+s off
+f 1/1 2/2 3/3 4/4
+f 5/5 8/6 7/7 6/8
+f 1/9 5/10 6/8 2/2
+f 2/2 6/8 7/7 3/3
+f 3/3 7/7 8/11 4/12
+f 5/5 1/13 4/14 8/6
+"#;
+
+  let expected =
+    Ok(ObjSet {
+      material_library: "cube.mtl".into_string(),
+      objects: vec![
+        Object {
+          name: "Cube".into_string(),
+          verticies: vec![
+            Vertex { x:  1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z: -1.0 }
+          ],
+          tex_verticies: vec![
+            TVertex { x: 1.004952, y: 0.498633 },
+            TVertex { x: 0.754996, y: 0.498236 },
+            TVertex { x: 0.755393, y: 0.248279 },
+            TVertex { x: 1.005349, y: 0.248677 },
+            TVertex { x: 0.255083, y: 0.497442 },
+            TVertex { x: 0.25548, y: 0.247485 },
+            TVertex { x: 0.505437, y: 0.247882 },
+            TVertex { x: 0.505039, y: 0.497839 },
+            TVertex { x: 0.754598, y: 0.748193 },
+            TVertex { x: 0.504642, y: 0.747795 },
+            TVertex { x: 0.505834, y: -0.002074 },
+            TVertex { x: 0.75579, y: -0.001677 },
+            TVertex { x: 0.005127, y: 0.497044 },
+            TVertex { x: 0.005524, y: 0.247088 }
+          ],
+          geometry: vec![
+            Geometry {
+              material_name: Some("Material".into_string()),
+              use_smooth_shading: false,
+              shapes: vec![
+                Triangle((3, Some(3)), (0, Some(0)), (1, Some(1))),
+                Triangle((3, Some(3)), (1, Some(1)), (2, Some(2))),
+                Triangle((5, Some(7)), (4, Some(4)), (7, Some(5))),
+                Triangle((5, Some(7)), (7, Some(5)), (6, Some(6))),
+                Triangle((1, Some(1)), (0, Some(8)), (4, Some(9))),
+                Triangle((1, Some(1)), (4, Some(9)), (5, Some(7))),
+                Triangle((2, Some(2)), (1, Some(1)), (5, Some(7))),
+                Triangle((2, Some(2)), (5, Some(7)), (6, Some(6))),
+                Triangle((3, Some(11)), (2, Some(2)), (6, Some(6))),
+                Triangle((3, Some(11)), (6, Some(6)), (7, Some(10))),
+                Triangle((7, Some(5)), (4, Some(4)), (0, Some(12))),
+                Triangle((7, Some(5)), (0, Some(12)), (3, Some(13)))
+              ]
+            }
+          ]
+        }
+      ]
     });
 
   assert_eq!(parse(test_case.into_string()), expected);
