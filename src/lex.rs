@@ -1,5 +1,4 @@
 use std::iter;
-use std::mem;
 use std::slice;
 
 /// A parsing error, with location information.
@@ -12,44 +11,19 @@ pub struct ParseError {
 }
 
 #[inline]
-fn c2u8(c: char) -> u8 {
-  c as u8
-}
-
-#[allow(dead_code)]
-fn s2u8(s: &str) -> Vec<u8> {
-  s.bytes().collect()
-}
-
-#[allow(dead_code)]
-fn u82s<'a>(u8s: &'a [u8]) -> &'a str {
-  // According to the docs, &'a str is the same representation as a &'a [u8].
-  unsafe { mem::transmute(u8s) }
-}
-
-#[test]
-fn verify_u82s() {
-  let cases = [ "hello", "world" ];
-
-  for &case in cases.iter() {
-    assert_eq!(u82s(s2u8(case).as_slice()), case);
-  }
-}
-
-#[inline]
 fn is_whitespace(c: u8) -> bool {
-  c == c2u8(' ') || c == c2u8('\t') || c == c2u8('\n')
+  c == b' ' || c == b'\t' || c == b'\n'
 }
 
 pub struct Lexer<'a> {
-  bytes: iter::Peekable<u8, iter::Fuse<iter::Map<'a, &'a u8, u8, slice::Items<'a, u8>>>>,
+  bytes: iter::Peekable<u8, iter::Map<'a, &'a u8, u8, slice::Items<'a, u8>>>,
   current_line_number: uint,
 }
 
 impl<'a> Lexer<'a> {
   pub fn new(input: &'a str) -> Lexer<'a> {
     Lexer {
-      bytes: input.bytes().fuse().peekable(),
+      bytes: input.bytes().peekable(),
       current_line_number: 1,
     }
   }
@@ -59,7 +33,7 @@ impl<'a> Lexer<'a> {
     match self.bytes.next() {
       None => {},
       Some(c) => {
-        if c == c2u8('\n') {
+        if c == b'\n' {
           self.current_line_number += 1;
         }
       }
@@ -113,9 +87,9 @@ impl<'a> Lexer<'a> {
     match self.peek() {
       None => return false,
       Some(c) => {
-        if c == c2u8('#') {
+        if c == b'#' {
           // skip over the rest of the comment (except the newline)
-          self.skip_unless(|c| c == c2u8('\n'));
+          self.skip_unless(|c| c == b'\n');
           return true;
         } else {
           return false;
@@ -125,7 +99,7 @@ impl<'a> Lexer<'a> {
   }
 
   fn skip_whitespace_except_newline(&mut self) -> bool {
-    self.skip_while(|c| c == c2u8('\t') || c == c2u8(' '))
+    self.skip_while(|c| c == b'\t' || c == b' ')
   }
 
   /// Gets the next word in the input, as well as whether it's on
@@ -139,11 +113,11 @@ impl<'a> Lexer<'a> {
       match self.peek() {
         None => break,
         Some(c) => {
-          if c == c2u8('#') {
+          if c == b'#' {
             assert!(self.skip_comment());
             self.skip_whitespace_except_newline();
           } else if is_whitespace(c) {
-            if c == c2u8('\n') && ret.is_empty() {
+            if c == b'\n' && ret.is_empty() {
               ret.push(c);
               self.advance();
             }
@@ -186,21 +160,21 @@ impl<'a> Iterator<String> for Lexer<'a> {
 #[test]
 fn test_next_word() {
   let mut l = Lexer::new("hello world\n this# is\na   \t test\n");
-  assert_eq!(l.next_word(), Some(s2u8("hello")));
+  assert_eq!(l.next_word(), Some(b"hello".to_vec()));
   assert_eq!(l.current_line_number, 1);
-  assert_eq!(l.next_word(), Some(s2u8("world")));
+  assert_eq!(l.next_word(), Some(b"world".to_vec()));
   assert_eq!(l.current_line_number, 1);
-  assert_eq!(l.next_word(), Some(s2u8("\n")));
+  assert_eq!(l.next_word(), Some(b"\n".to_vec()));
   assert_eq!(l.current_line_number, 2);
-  assert_eq!(l.next_word(), Some(s2u8("this")));
+  assert_eq!(l.next_word(), Some(b"this".to_vec()));
   assert_eq!(l.current_line_number, 2);
-  assert_eq!(l.next_word(), Some(s2u8("\n")));
+  assert_eq!(l.next_word(), Some(b"\n".to_vec()));
   assert_eq!(l.current_line_number, 3);
-  assert_eq!(l.next_word(), Some(s2u8("a")));
+  assert_eq!(l.next_word(), Some(b"a".to_vec()));
   assert_eq!(l.current_line_number, 3);
-  assert_eq!(l.next_word(), Some(s2u8("test")));
+  assert_eq!(l.next_word(), Some(b"test".to_vec()));
   assert_eq!(l.current_line_number, 3);
-  assert_eq!(l.next_word(), Some(s2u8("\n")));
+  assert_eq!(l.next_word(), Some(b"\n".to_vec()));
   assert_eq!(l.current_line_number, 4);
   assert_eq!(l.next_word(), None);
 }

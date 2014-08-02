@@ -1024,7 +1024,7 @@ f 5/5 1/13 4/14 8/6
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
 /// file, or an error. Support in this parser for the full file format is
 /// best-effort and realistically I will only end up supporting the subset
-/// of the file format which falls under the "shit I see exported from blender"
+/// of the file format which falls under the "things I see exported from blender"
 /// category.
 pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
