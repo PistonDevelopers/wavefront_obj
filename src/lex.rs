@@ -85,14 +85,14 @@ impl<'a> Lexer<'a> {
   /// Returns whether or not any of the input was skipped.
   fn skip_comment(&mut self) -> bool {
     match self.peek() {
-      None => return false,
+      None => false,
       Some(c) => {
         if c == b'#' {
           // skip over the rest of the comment (except the newline)
           self.skip_unless(|c| c == b'\n');
-          return true;
+          true
         } else {
-          return false;
+          false
         }
       }
     }
@@ -141,15 +141,12 @@ impl<'a> Lexer<'a> {
 
 impl<'a> Iterator<String> for Lexer<'a> {
   fn next(&mut self) -> Option<String> {
-    match self.next_word() {
-      None => None,
-      Some(buf) => {
-        match String::from_utf8(buf) {
-          Ok(s) => Some(s),
-          Err(_) => fail!("Lex error: Invalid utf8 on line {}.", self.current_line_number),
-        }
+    self.next_word().map(|buf| {
+      match String::from_utf8(buf) {
+        Ok(s) => s,
+        Err(_) => fail!("Lex error: Invalid utf8 on line {}.", self.current_line_number),
       }
-    }
+    })
   }
 
   fn size_hint(&self) -> (uint, Option<uint>) {
