@@ -288,81 +288,67 @@ impl<'a> Parser<'a> {
     }
   }
 
-  /// Skips over some newlines, failing if it didn't manage to skip any.
-  fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
-    match sliced(&self.peek()) {
-      None => return self.error("Expected newline but got end of input.".into_string()),
-      Some("\n") => {},
-      Some(s) => return self.error(format!("Expected newline but got {}", s)),
+  /// Parse just a constant string.
+  fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
+    match sliced(&self.next()) {
+      None =>
+        return self.error(format!("Expected `{}` but got end of input.", tag)),
+      Some(s) => {
+        if s != tag {
+          return self.error(format!("Expected `{}` but got {}.", tag, s));
+        }
+      }
     }
 
-    self.zero_or_more_newlines();
+    return Ok(())
+  }
 
+  /// Skips over some newlines, failing if it didn't manage to skip any.
+  fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
+    try!(self.parse_tag("\n"));
+    self.zero_or_more_newlines();
     Ok(())
   }
 
-  fn parse_material_library<'a>(&mut self) -> Result<String, ParseError> {
-    match sliced(&self.next()) {
-      None =>
-        return self.error("Expected `mtllib` but got end of input.".into_string()),
-      Some("mtllib") =>
-        {},
-      Some(got) =>
-        return self.error(format!("Expected `mtllib` but got {}.", got)),
-    }
-
+  fn parse_str(&mut self) -> Result<String, ParseError> {
     match self.next() {
       None =>
-        self.error("Expected library name but got end of input.".into_string()),
-      Some(got) =>
-        Ok(got),
-    }
-  }
-
-  fn parse_object_name(&mut self) -> Result<String, ParseError> {
-    match sliced(&self.next()) {
-      None =>
-        return self.error(format!("Expected `o` but got end of input.")),
-      Some("o") =>
-        {},
-      Some(got) =>
-        return self.error(format!("Expected `o` but got {}.", got)),
-    }
-
-    match self.next() {
-      None =>
-        return self.error("Expected object name but got end of input.".into_string()),
-      Some(got) =>
-        Ok(got),
-    }
-  }
-
-  // TODO(cgaebel): Should this be returning `num::rational::BigRational` instead?
-  // I can't think of a good reason to do this except to make testing easier.
-  fn parse_double(&mut self) -> Result<f64, ParseError> {
-    match sliced(&self.next()) {
-      None =>
-        return self.error("Expected f64 but got end of input.".into_string()),
-      Some(s) => {
-        match from_str::<f64>(s) {
-          None =>
-            return self.error(format!("Expected f64 but got {}.", s)),
-          Some(ret) =>
-            Ok(ret)
+        self.error(format!("Expected string but got end of input.")),
+      Some(got) => {
+        if got.as_slice() == "\n" {
+          self.error(format!("Expected string but got `end of line`."))
+        } else {
+          Ok(got)
         }
       }
     }
   }
 
-  fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
-    match sliced(&self.next()) {
+  fn parse_material_library<'a>(&mut self) -> Result<String, ParseError> {
+    try!(self.parse_tag("mtllib"));
+    self.parse_str()
+  }
+
+  fn parse_object_name(&mut self) -> Result<String, ParseError> {
+    try!(self.parse_tag("o"));
+    self.parse_str()
+  }
+
+  // TODO(cgaebel): Should this be returning `num::rational::BigRational` instead?
+  // I can't think of a good reason to do this except to make testing easier.
+  fn parse_double(&mut self) -> Result<f64, ParseError> {
+    let s = try!(self.parse_str());
+
+    match from_str::<f64>(s.as_slice()) {
       None =>
-        return self.error("Expected `v` but got end of input.".into_string()),
-      Some("v") =>
-        {},
-      Some(s) =>
-        return self.error(format!("Expected `v` but got {}.", s)),
+        self.error(format!("Expected f64 but got {}.", s)),
+      Some(ret) =>
+        Ok(ret)
     }
+  }
+
+  fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
+    try!(self.parse_tag("v"));
 
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
@@ -391,14 +377,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
-    match sliced(&self.next()) {
-      None =>
-        return self.error("Expected `vt` but got end of input.".into_string()),
-      Some("vt") =>
-        {},
-      Some(s) =>
-        return self.error(format!("Expected `vt` but got {}.", s)),
-    }
+    try!(self.parse_tag("vt"));
 
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
@@ -426,30 +405,17 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_usemtl(&mut self) -> Result<String, ParseError> {
-    match sliced(&self.next()) {
-      Some("usemtl") => {},
-      None    => return self.error("Expected `usemtl` but got end of input.".into_string()),
-      Some(s) => return self.error(format!("Expected `usemtl` but got {}.", s)),
-    }
-
-    match self.next() {
-      None    => return self.error("Expected material name but got end of input.".into_string()),
-      Some(s) => Ok(s)
-    }
+    try!(self.parse_tag("usemtl"));
+    self.parse_str()
   }
 
   fn parse_smooth_shading(&mut self) -> Result<bool, ParseError> {
-    match sliced(&self.next()) {
-      Some("s") => {},
-      None      => return self.error("Expected `s` but got end of input.".into_string()),
-      Some(s)   => return self.error(format!("Expected `s` but got {}.", s)),
-    }
+    try!(self.parse_tag("s"));
 
-    match sliced(&self.next()) {
-      Some("on")  => Ok(true),
-      Some("off") => Ok(false),
-      None        => return self.error("Expected `on` or `off` but got end of input.".into_string()),
-      Some(s)     => return self.error(format!("Expected `on` or `off` but got {}.", s)),
+    match try!(self.parse_str()).as_slice() {
+      "on"  => Ok(true),
+      "off" => Ok(false),
+      s     => self.error(format!("Expected `on` or `off` but got {}.", s)),
     }
   }
 

@@ -350,6 +350,13 @@ impl<'a> Parser<'a> {
       }
     }
 
+    match self.peek() {
+      None =>
+        {},
+      Some(s) =>
+        return self.error(format!("Expected end of input but got {}.", s)),
+    }
+
     Ok(MtlSet {
       materials: ret
     })
