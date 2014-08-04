@@ -1,0 +1,12 @@
+env:
+    global:
+        - LD_LIBRARY_PATH: /usr/local/lib
+
+install:
+    - wget http://www.rust-lang.org/rustup.sh
+    - sudo sh ./rustup.sh
+    - rustc -v
+script:
+    - cargo build
+    - cargo test
+    - cargo doc
