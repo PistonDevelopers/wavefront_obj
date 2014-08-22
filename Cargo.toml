@@ -6,7 +6,7 @@ authors = [
     "Clark Gaebel <cg.wowus.cg@gmail.com>",
   ]
 
-[[lib]]
+[lib]
 
 name = "wavefront-obj"
 path = "./src/lib.rs"
