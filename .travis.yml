@@ -1,12 +1,14 @@
+language: rust
+os:
+    - linux
+    - osx
 env:
     global:
         - LD_LIBRARY_PATH: /usr/local/lib
-
-install:
-    - wget http://www.rust-lang.org/rustup.sh
-    - sudo sh ./rustup.sh
+before_script:
     - rustc -v
+    - cargo -V
 script:
-    - cargo build
-    - cargo test
-    - cargo doc
+    - cargo build -v
+    - cargo test -v
+    - cargo doc -v
