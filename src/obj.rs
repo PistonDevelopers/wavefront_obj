@@ -19,12 +19,12 @@ pub struct ObjSet {
 pub struct Object {
   /// A human-readable name for this object. This can be set in blender.
   pub name: String,
-  /// The set of verticies this object is composed of. These are referenced
+  /// The set of vertices this object is composed of. These are referenced
   /// by index in `faces`.
-  pub verticies: Vec<Vertex>,
-  /// The set of texture verticies referenced by this object. The actual
-  /// verticies are indexed by the second element in a `VTIndex`.
-  pub tex_verticies: Vec<TVertex>,
+  pub vertices: Vec<Vertex>,
+  /// The set of texture vertices referenced by this object. The actual
+  /// vertices are indexed by the second element in a `VTIndex`.
+  pub tex_vertices: Vec<TVertex>,
   /// A set of shapes (with materials applied to them) of which this object is
   // composed.
   pub geometry: Vec<Geometry>,
@@ -51,7 +51,7 @@ pub enum Shape {
   Point(VTIndex),
   /// A line specified by its endpoints.
   Line(VTIndex, VTIndex),
-  /// A triangle specified by its three verticies.
+  /// A triangle specified by its three vertices.
   Triangle(VTIndex, VTIndex, VTIndex),
 }
 
@@ -110,7 +110,7 @@ impl PartialOrd for TVertex {
   }
 }
 
-/// An index into the `verticies` array of an object, representing a vertex in
+/// An index into the `vertices` array of an object, representing a vertex in
 /// the mesh. After parsing, this is guaranteed to be a valid index into the
 /// array, so unchecked indexing may be used.
 pub type VertexIndex = uint;
@@ -134,7 +134,7 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
   }
 }
 
-/// Blender exports shapes as a list of the verticies representing their corners.
+/// Blender exports shapes as a list of the vertices representing their corners.
 /// This function turns that into a set of OpenGL-usable shapes - i.e. points,
 /// lines, or triangles.
 fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
@@ -358,7 +358,7 @@ impl<'a> Parser<'a> {
   }
 
   /// BUG: Also munches trailing whitespace.
-  fn parse_verticies(&mut self) -> Result<Vec<Vertex>, ParseError> {
+  fn parse_vertices(&mut self) -> Result<Vec<Vertex>, ParseError> {
     let mut result = Vec::new();
 
     loop {
@@ -386,7 +386,7 @@ impl<'a> Parser<'a> {
   }
 
   /// BUG: Also munches trailing whitespace.
-  fn parse_tex_verticies(&mut self) -> Result<Vec<TVertex>, ParseError> {
+  fn parse_tex_vertices(&mut self) -> Result<Vec<TVertex>, ParseError> {
     let mut result = Vec::new();
 
     loop {
@@ -557,24 +557,24 @@ impl<'a> Parser<'a> {
     let name = try!(self.parse_object_name());
     try!(self.one_or_more_newlines());
 
-    let verticies     = try!(self.parse_verticies());
-    let tex_verticies = try!(self.parse_tex_verticies());
+    let vertices     = try!(self.parse_vertices());
+    let tex_vertices = try!(self.parse_tex_vertices());
 
-    *max_vertex_index += verticies.len();
-    *max_tex_index    += tex_verticies.len();
+    *max_vertex_index += vertices.len();
+    *max_tex_index    += tex_vertices.len();
 
     let geometry =
       try!(self.parse_geometries(
         (*min_vertex_index, *max_vertex_index),
         (*min_tex_index, *max_tex_index)));
 
-    *min_vertex_index += verticies.len();
-    *min_tex_index    += tex_verticies.len();
+    *min_vertex_index += vertices.len();
+    *min_tex_index    += tex_vertices.len();
 
     Ok(Object {
       name:          name,
-      verticies:     verticies,
-      tex_verticies: tex_verticies,
+      vertices:     vertices,
+      tex_vertices: tex_vertices,
       geometry:      geometry,
     })
   }
@@ -738,7 +738,7 @@ f 45 41 44 48
       objects: vec!(
         Object {
           name: "Cube.001".into_string(),
-          verticies: vec!(
+          vertices: vec!(
             Vertex { x: -1.0, y: -1.0, z: 1.0 },
             Vertex { x: -1.0, y: -1.0, z: -1.0 },
             Vertex { x: 1.0, y: -1.0, z: -1.0 },
@@ -748,7 +748,7 @@ f 45 41 44 48
             Vertex { x: 1.0, y: 1.0, z: -1.0 },
             Vertex { x: 1.0, y: 1.0, z: 1.0 }
           ),
-          tex_verticies: vec!(),
+          tex_vertices: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("None".into_string()),
@@ -772,7 +772,7 @@ f 45 41 44 48
         },
         Object {
           name: "Circle".into_string(),
-          verticies: vec!(
+          vertices: vec!(
             Vertex { x: 0.0, y: 0.0, z: -1.0 },
             Vertex { x: -0.19509, y: 0.0, z: -0.980785 },
             Vertex { x: -0.382683, y: 0.0, z: -0.92388 },
@@ -806,7 +806,7 @@ f 45 41 44 48
             Vertex { x: 0.382682, y: 0.0, z: -0.92388 },
             Vertex { x: 0.195089, y: 0.0, z: -0.980786 }
           ),
-          tex_verticies: vec!(),
+          tex_vertices: vec!(),
           geometry: vec!(
             Geometry {
               material_name: None,
@@ -850,7 +850,7 @@ f 45 41 44 48
         },
         Object {
           name: "Cube".into_string(),
-          verticies: vec!(
+          vertices: vec!(
             Vertex { x: 1.0, y: -1.0, z: -1.0 },
             Vertex { x: 1.0, y: -1.0, z: 1.0 },
             Vertex { x: -1.0, y: -1.0, z: 1.0 },
@@ -860,7 +860,7 @@ f 45 41 44 48
             Vertex { x: -1.0, y: 1.0, z: 1.0 },
             Vertex { x: -1.0, y: 1.0, z: -1.0 }
           ),
-          tex_verticies: vec!(),
+          tex_vertices: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("Material".into_string()),
@@ -934,7 +934,7 @@ f 5/5 1/13 4/14 8/6
       objects: vec![
         Object {
           name: "Cube".into_string(),
-          verticies: vec![
+          vertices: vec![
             Vertex { x:  1.0, y: -1.0, z: -1.0 },
             Vertex { x:  1.0, y: -1.0, z:  1.0 },
             Vertex { x: -1.0, y: -1.0, z:  1.0 },
@@ -944,7 +944,7 @@ f 5/5 1/13 4/14 8/6
             Vertex { x: -1.0, y:  1.0, z:  1.0 },
             Vertex { x: -1.0, y:  1.0, z: -1.0 }
           ],
-          tex_verticies: vec![
+          tex_vertices: vec![
             TVertex { x: 1.004952, y: 0.498633 },
             TVertex { x: 0.754996, y: 0.498236 },
             TVertex { x: 0.755393, y: 0.248279 },
