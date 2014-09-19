@@ -546,7 +546,7 @@ impl<'a> Parser<'a> {
       shapes:             shapes,
     });
 
-    Ok(result.move_iter().filter(|ref x| !x.shapes.is_empty()).collect())
+    Ok(result.into_iter().filter(|ref x| !x.shapes.is_empty()).collect())
   }
 
   fn parse_object(&mut self,
