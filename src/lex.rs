@@ -144,7 +144,7 @@ impl<'a> Iterator<String> for Lexer<'a> {
     self.next_word().map(|buf| {
       match String::from_utf8(buf) {
         Ok(s) => s,
-        Err(_) => fail!("Lex error: Invalid utf8 on line {}.", self.current_line_number),
+        Err(_) => panic!("Lex error: Invalid utf8 on line {}.", self.current_line_number),
       }
     })
   }
