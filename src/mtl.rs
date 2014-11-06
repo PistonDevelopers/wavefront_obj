@@ -7,7 +7,7 @@ use lex::Lexer;
 
 /// A set of materials in one `.mtl` file.
 #[deriving(Clone, Show, PartialEq)]
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 pub struct MtlSet {
   pub materials: Vec<Material>,
 }
@@ -15,7 +15,7 @@ pub struct MtlSet {
 /// A single material that can be applied to any face. They are generally
 /// applied by using the Phong shading model.
 #[deriving(Clone, Show)]
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 pub struct Material {
   pub name: String,
   pub specular_coefficient: f64,
@@ -30,7 +30,7 @@ pub struct Material {
 
 /// How a given material is supposed to be illuminated.
 #[deriving(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 pub enum Illumination {
   Ambient,
   AmbientDiffuse,
@@ -38,7 +38,7 @@ pub enum Illumination {
 }
 
 #[deriving(Clone, Copy, Show)]
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 pub struct Color {
   pub r: f64,
   pub g: f64,

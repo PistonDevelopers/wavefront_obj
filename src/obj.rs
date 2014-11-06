@@ -25,8 +25,11 @@ pub struct Object {
   /// The set of texture vertices referenced by this object. The actual
   /// vertices are indexed by the second element in a `VTIndex`.
   pub tex_vertices: Vec<TVertex>,
+  /// The set of normals referenced by this object. This are are referenced
+  /// by the third element in a `VTIndex`.
+  pub normals: Vec<Normal>,
   /// A set of shapes (with materials applied to them) of which this object is
-  // composed.
+  /// composed.
   pub geometry: Vec<Geometry>,
 }
 
@@ -56,7 +59,7 @@ pub enum Shape {
 }
 
 /// A single 3-dimensional point on the corner of an object.
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 #[deriving(Clone, Copy, Show)]
 pub struct Vertex {
   pub x: f64,
@@ -64,8 +67,11 @@ pub struct Vertex {
   pub z: f64,
 }
 
+/// A single 3-dimensional normal
+pub type Normal = Vertex;
+
 /// A single 2-dimensional point on a texture. "Texure Vertex".
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 #[deriving(Clone, Copy, Show)]
 pub struct TVertex {
   pub x: f64,
@@ -121,10 +127,16 @@ pub type VertexIndex = uint;
 /// range by the parser.
 pub type TextureIndex = uint;
 
+/// An index into the `normals` array of an object.
+///
+/// Unchecked indexing may be used, because the values are guaranteed to be in
+/// range by the parser.
+pub type NormalIndex = uint;
+
 /// An index into the vertex array, with an optional index into the texture
 /// array. This is used to define the corners of shapes which may or may not
 /// be textured.
-pub type VTIndex = (VertexIndex, Option<TextureIndex>);
+pub type VTIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
@@ -158,73 +170,73 @@ fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
 fn test_to_triangles() {
   assert_eq!(to_triangles(&[]), vec!());
 
-  assert_eq!(to_triangles(&[(3,None)]), vec!(Point((3,None))));
+  assert_eq!(to_triangles(&[(3,None, None)]), vec!(Point((3,None, None))));
 
   assert_eq!(
     to_triangles(&[
-      (1,None)
-      ,(2,None)
+      (1, None, None)
+      ,(2, None, None)
     ]),
     vec!(
       Line(
-        (1,None),
-        (2,None)
+        (1, None, None),
+        (2, None, None)
       )
     ));
 
   assert_eq!(
     to_triangles(&[
-      (1,None),
-      (2,None),
-      (3,None)
+      (1, None, None),
+      (2, None, None),
+      (3, None, None)
     ]),
     vec!(
       Triangle(
-        (3,None),
-        (1,None),
-        (2,None)
+        (3, None, None),
+        (1, None, None),
+        (2, None, None)
       )
     ));
 
   assert_eq!(
     to_triangles(&[
-      (1,None),
-      (2,None),
-      (3,None),
-      (4,None)
+      (1, None, None),
+      (2, None, None),
+      (3, None, None),
+      (4, None, None)
     ]),
     vec!(
       Triangle(
-        (4,None),
-        (1,None),
-        (2,None)),
+        (4, None, None),
+        (1, None, None),
+        (2, None, None)),
       Triangle(
-        (4,None),
-        (2,None),
-        (3,None)
+        (4, None, None),
+        (2, None, None),
+        (3, None, None)
       )
     ));
 
   assert_eq!(
     to_triangles(&[
-      (1,None),
-      (2,None),
-      (3,None),
-      (4,None),
-      (5,None)
+      (1, None, None),
+      (2, None, None),
+      (3, None, None),
+      (4, None, None),
+      (5, None, None)
     ]), vec!(
       Triangle(
-        (5,None),
-        (1,None),
-        (2,None)),
+        (5, None, None),
+        (1, None, None),
+        (2, None, None)),
       Triangle(
-        (5,None),
-        (2,None),
-        (3,None)),
+        (5, None, None),
+        (2, None, None),
+        (3, None, None)),
       Triangle(
-        (5,None),
-        (3,None),
-        (4,None)
+        (5, None, None),
+        (3, None, None),
+        (4, None, None)
       )
     ));
 }
@@ -404,6 +416,35 @@ impl<'a> Parser<'a> {
     Ok(result)
   }
 
+  fn parse_normal(&mut self) -> Result<Normal, ParseError> {
+    try!(self.parse_tag("vn"));
+
+    let x = try!(self.parse_double());
+    let y = try!(self.parse_double());
+    let z = try!(self.parse_double());
+
+    Ok(Normal { x: x, y: y, z: z })
+  }
+
+  /// BUG: Also munches trailing whitespace.
+  fn parse_normals(&mut self) -> Result<Vec<Vertex>, ParseError> {
+    let mut result = Vec::new();
+
+    loop {
+      match sliced(&self.peek()) {
+        Some("vn") => {
+          let vn = try!(self.parse_normal());
+          result.push(vn);
+        },
+        _ => break,
+      }
+
+      try!(self.one_or_more_newlines());
+    }
+
+    Ok(result)
+  }
+
   fn parse_usemtl(&mut self) -> Result<String, ParseError> {
     try!(self.parse_tag("usemtl"));
     self.parse_str()
@@ -428,7 +469,8 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_vtindex(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<VTIndex, ParseError> {
+  fn parse_vtindex(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
+                  valid_nx: (uint, uint) ) -> Result<VTIndex, ParseError> {
     match sliced(&self.next()) {
       None =>
         return self.error("Expected vertex index but got end of input.".into_string()),
@@ -440,14 +482,28 @@ impl<'a> Parser<'a> {
           1 => {
             let v_idx = try!(self.parse_int_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            Ok((v_idx, None))
+            Ok((v_idx, None, None))
           },
           2 => {
             let v_idx = try!(self.parse_int_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             let t_idx = try!(self.parse_int_from(splits[1]));
             let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
-            Ok((v_idx, Some(t_idx)))
+            Ok((v_idx, Some(t_idx), None))
+          },
+          3 => {
+            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
+            let t_idx_opt = if splits[1].len() == 0 {
+              None
+            } else {
+              let t_idx = try!(self.parse_int_from(splits[1]));
+              let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
+              Some(t_idx)
+            };
+            let n_idx = try!(self.parse_int_from(splits[2]));
+            let n_idx = try!(self.check_valid_index(valid_nx, n_idx));
+            Ok((v_idx, t_idx_opt, Some(n_idx)))
           },
           n =>
             self.error(format!("Expected at most 2 vertex indexes but got {}.", n)),
@@ -475,7 +531,8 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_face(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<Vec<Shape>, ParseError> {
+  fn parse_face(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
+               valid_nx: (uint, uint)) -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
@@ -485,20 +542,21 @@ impl<'a> Parser<'a> {
 
     let mut corner_list = Vec::new();
 
-    corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx)));
+    corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx)));
 
     loop {
       match sliced(&self.peek()) {
         None       => break,
         Some("\n") => break,
-        Some( _  ) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx))),
+        Some( _  ) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx))),
       }
     }
 
     Ok(to_triangles(corner_list.as_slice()))
   }
 
-  fn parse_geometries(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint)) -> Result<Vec<Geometry>, ParseError> {
+  fn parse_geometries(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
+                     valid_nx: (uint, uint)) -> Result<Vec<Geometry>, ParseError> {
     let mut result = Vec::new();
     let mut shapes = Vec::new();
 
@@ -532,7 +590,8 @@ impl<'a> Parser<'a> {
           })
         },
         Some("f") | Some("l") => {
-          shapes.push_all(try!(self.parse_face(valid_vtx, valid_tx)).as_slice());
+          shapes.push_all(try!(self.parse_face(valid_vtx, valid_tx,
+                                               valid_nx)).as_slice());
         },
         _ => break,
       }
@@ -553,28 +612,36 @@ impl<'a> Parser<'a> {
       min_vertex_index: &mut uint,
       max_vertex_index: &mut uint,
       min_tex_index:    &mut uint,
-      max_tex_index:    &mut uint) -> Result<Object, ParseError> {
+      max_tex_index:    &mut uint,
+      min_normal_index: &mut uint,
+      max_normal_index: &mut uint
+      ) -> Result<Object, ParseError> {
     let name = try!(self.parse_object_name());
     try!(self.one_or_more_newlines());
 
     let vertices     = try!(self.parse_vertices());
     let tex_vertices = try!(self.parse_tex_vertices());
+    let normals      = try!(self.parse_normals());
 
     *max_vertex_index += vertices.len();
     *max_tex_index    += tex_vertices.len();
+    *max_normal_index += normals.len();
 
     let geometry =
       try!(self.parse_geometries(
         (*min_vertex_index, *max_vertex_index),
-        (*min_tex_index, *max_tex_index)));
+        (*min_tex_index, *max_tex_index),
+        (*min_normal_index, *max_normal_index)));
 
     *min_vertex_index += vertices.len();
     *min_tex_index    += tex_vertices.len();
+    *min_normal_index += normals.len();
 
     Ok(Object {
       name:          name,
       vertices:     vertices,
       tex_vertices: tex_vertices,
+      normals:      normals,
       geometry:      geometry,
     })
   }
@@ -586,6 +653,8 @@ impl<'a> Parser<'a> {
     let mut max_vertex_index = 1;
     let mut min_tex_index    = 1;
     let mut max_tex_index    = 1;
+    let mut min_normal_index = 1;
+    let mut max_normal_index = 1;
 
     loop {
       match sliced(&self.peek()) {
@@ -593,7 +662,9 @@ impl<'a> Parser<'a> {
                       &mut min_vertex_index,
                       &mut max_vertex_index,
                       &mut min_tex_index,
-                      &mut max_tex_index))),
+                      &mut max_tex_index,
+                      &mut min_normal_index,
+                      &mut max_normal_index))),
         _         => break,
       }
     }
@@ -749,23 +820,24 @@ f 45 41 44 48
             Vertex { x: 1.0, y: 1.0, z: 1.0 }
           ),
           tex_vertices: vec!(),
+          normals: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("None".into_string()),
               use_smooth_shading: false,
               shapes: vec!(
-                Triangle((0, None), (4, None), (5, None)),
-                Triangle((0, None), (5, None), (1, None)),
-                Triangle((1, None), (5, None), (6, None)),
-                Triangle((1, None), (6, None), (2, None)),
-                Triangle((2, None), (6, None), (7, None)),
-                Triangle((2, None), (7, None), (3, None)),
-                Triangle((3, None), (7, None), (4, None)),
-                Triangle((3, None), (4, None), (0, None)),
-                Triangle((3, None), (0, None), (1, None)),
-                Triangle((3, None), (1, None), (2, None)),
-                Triangle((4, None), (7, None), (6, None)),
-                Triangle((4, None), (6, None), (5, None)),
+                Triangle((0, None, None), (4, None, None), (5, None, None)),
+                Triangle((0, None, None), (5, None, None), (1, None, None)),
+                Triangle((1, None, None), (5, None, None), (6, None, None)),
+                Triangle((1, None, None), (6, None, None), (2, None, None)),
+                Triangle((2, None, None), (6, None, None), (7, None, None)),
+                Triangle((2, None, None), (7, None, None), (3, None, None)),
+                Triangle((3, None, None), (7, None, None), (4, None, None)),
+                Triangle((3, None, None), (4, None, None), (0, None, None)),
+                Triangle((3, None, None), (0, None, None), (1, None, None)),
+                Triangle((3, None, None), (1, None, None), (2, None, None)),
+                Triangle((4, None, None), (7, None, None), (6, None, None)),
+                Triangle((4, None, None), (6, None, None), (5, None, None)),
               )
             }
           )
@@ -807,43 +879,44 @@ f 45 41 44 48
             Vertex { x: 0.195089, y: 0.0, z: -0.980786 }
           ),
           tex_vertices: vec!(),
+          normals: vec!(),
           geometry: vec!(
             Geometry {
               material_name: None,
               use_smooth_shading: false,
               shapes: vec!(
-                Line((1, None), (0, None)),
-                Line((2, None), (1, None)),
-                Line((3, None), (2, None)),
-                Line((4, None), (3, None)),
-                Line((5, None), (4, None)),
-                Line((6, None), (5, None)),
-                Line((7, None), (6, None)),
-                Line((8, None), (7, None)),
-                Line((9, None), (8, None)),
-                Line((10, None), (9, None)),
-                Line((11, None), (10, None)),
-                Line((12, None), (11, None)),
-                Line((13, None), (12, None)),
-                Line((14, None), (13, None)),
-                Line((15, None), (14, None)),
-                Line((16, None), (15, None)),
-                Line((17, None), (16, None)),
-                Line((18, None), (17, None)),
-                Line((19, None), (18, None)),
-                Line((20, None), (19, None)),
-                Line((21, None), (20, None)),
-                Line((22, None), (21, None)),
-                Line((23, None), (22, None)),
-                Line((24, None), (23, None)),
-                Line((25, None), (24, None)),
-                Line((26, None), (25, None)),
-                Line((27, None), (26, None)),
-                Line((28, None), (27, None)),
-                Line((29, None), (28, None)),
-                Line((30, None), (29, None)),
-                Line((31, None), (30, None)),
-                Line((0, None), (31, None)),
+                Line((1, None, None), (0, None, None)),
+                Line((2, None, None), (1, None, None)),
+                Line((3, None, None), (2, None, None)),
+                Line((4, None, None), (3, None, None)),
+                Line((5, None, None), (4, None, None)),
+                Line((6, None, None), (5, None, None)),
+                Line((7, None, None), (6, None, None)),
+                Line((8, None, None), (7, None, None)),
+                Line((9, None, None), (8, None, None)),
+                Line((10, None, None), (9, None, None)),
+                Line((11, None, None), (10, None, None)),
+                Line((12, None, None), (11, None, None)),
+                Line((13, None, None), (12, None, None)),
+                Line((14, None, None), (13, None, None)),
+                Line((15, None, None), (14, None, None)),
+                Line((16, None, None), (15, None, None)),
+                Line((17, None, None), (16, None, None)),
+                Line((18, None, None), (17, None, None)),
+                Line((19, None, None), (18, None, None)),
+                Line((20, None, None), (19, None, None)),
+                Line((21, None, None), (20, None, None)),
+                Line((22, None, None), (21, None, None)),
+                Line((23, None, None), (22, None, None)),
+                Line((24, None, None), (23, None, None)),
+                Line((25, None, None), (24, None, None)),
+                Line((26, None, None), (25, None, None)),
+                Line((27, None, None), (26, None, None)),
+                Line((28, None, None), (27, None, None)),
+                Line((29, None, None), (28, None, None)),
+                Line((30, None, None), (29, None, None)),
+                Line((31, None, None), (30, None, None)),
+                Line((0, None, None), (31, None, None)),
               )
             }
           )
@@ -861,23 +934,24 @@ f 45 41 44 48
             Vertex { x: -1.0, y: 1.0, z: -1.0 }
           ),
           tex_vertices: vec!(),
+          normals: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("Material".into_string()),
               use_smooth_shading: false,
               shapes: vec!(
-                Triangle((3, None), (0, None), (1, None)),
-                Triangle((3, None), (1, None), (2, None)),
-                Triangle((5, None), (4, None), (7, None)),
-                Triangle((5, None), (7, None), (6, None)),
-                Triangle((1, None), (0, None), (4, None)),
-                Triangle((1, None), (4, None), (5, None)),
-                Triangle((2, None), (1, None), (5, None)),
-                Triangle((2, None), (5, None), (6, None)),
-                Triangle((3, None), (2, None), (6, None)),
-                Triangle((3, None), (6, None), (7, None)),
-                Triangle((7, None), (4, None), (0, None)),
-                Triangle((7, None), (0, None), (3, None)),
+                Triangle((3, None, None), (0, None, None), (1, None, None)),
+                Triangle((3, None, None), (1, None, None), (2, None, None)),
+                Triangle((5, None, None), (4, None, None), (7, None, None)),
+                Triangle((5, None, None), (7, None, None), (6, None, None)),
+                Triangle((1, None, None), (0, None, None), (4, None, None)),
+                Triangle((1, None, None), (4, None, None), (5, None, None)),
+                Triangle((2, None, None), (1, None, None), (5, None, None)),
+                Triangle((2, None, None), (5, None, None), (6, None, None)),
+                Triangle((3, None, None), (2, None, None), (6, None, None)),
+                Triangle((3, None, None), (6, None, None), (7, None, None)),
+                Triangle((7, None, None), (4, None, None), (0, None, None)),
+                Triangle((7, None, None), (0, None, None), (3, None, None)),
               )
             }
           )
@@ -960,23 +1034,24 @@ f 5/5 1/13 4/14 8/6
             TVertex { x: 0.005127, y: 0.497044 },
             TVertex { x: 0.005524, y: 0.247088 }
           ],
+          normals : vec![],
           geometry: vec![
             Geometry {
               material_name: Some("Material".into_string()),
               use_smooth_shading: false,
               shapes: vec![
-                Triangle((3, Some(3)), (0, Some(0)), (1, Some(1))),
-                Triangle((3, Some(3)), (1, Some(1)), (2, Some(2))),
-                Triangle((5, Some(7)), (4, Some(4)), (7, Some(5))),
-                Triangle((5, Some(7)), (7, Some(5)), (6, Some(6))),
-                Triangle((1, Some(1)), (0, Some(8)), (4, Some(9))),
-                Triangle((1, Some(1)), (4, Some(9)), (5, Some(7))),
-                Triangle((2, Some(2)), (1, Some(1)), (5, Some(7))),
-                Triangle((2, Some(2)), (5, Some(7)), (6, Some(6))),
-                Triangle((3, Some(11)), (2, Some(2)), (6, Some(6))),
-                Triangle((3, Some(11)), (6, Some(6)), (7, Some(10))),
-                Triangle((7, Some(5)), (4, Some(4)), (0, Some(12))),
-                Triangle((7, Some(5)), (0, Some(12)), (3, Some(13)))
+                Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
+                Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)),
+                Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)),
+                Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)),
+                Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)),
+                Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)),
+                Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)),
+                Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)),
+                Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)),
+                Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)),
+                Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)),
+                Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None))
               ]
             }
           ]
@@ -985,6 +1060,239 @@ f 5/5 1/13 4/14 8/6
     });
 
   assert_eq!(parse(test_case.into_string()), expected);
+}
+
+#[test]
+fn test_normals_no_tex() {
+  let test_case =
+r#"
+# Blender v2.70 (sub 4) OBJ File: ''
+# www.blender.org
+mtllib normal-cone.mtl
+o Cone
+v 0.000000  -1.000000 -1.000000
+v 0.000000   1.000000  0.000000
+v 0.195090  -1.000000 -0.980785
+v 0.382683  -1.000000 -0.923880
+v 0.555570  -1.000000 -0.831470
+v 0.707107  -1.000000 -0.707107
+v 0.831470  -1.000000 -0.555570
+v 0.923880  -1.000000 -0.382683
+v 0.980785  -1.000000 -0.195090
+v 1.000000  -1.000000 -0.000000
+v 0.980785  -1.000000  0.195090
+v 0.923880  -1.000000  0.382683
+v 0.831470  -1.000000  0.555570
+v 0.707107  -1.000000  0.707107
+v 0.555570  -1.000000  0.831470
+v 0.382683  -1.000000  0.923880
+v 0.195090  -1.000000  0.980785
+v -0.000000 -1.000000  1.000000
+v -0.195091 -1.000000  0.980785
+v -0.382684 -1.000000  0.923879
+v -0.555571 -1.000000  0.831469
+v -0.707107 -1.000000  0.707106
+v -0.831470 -1.000000  0.555570
+v -0.923880 -1.000000  0.382683
+v -0.980785 -1.000000  0.195089
+v -1.000000 -1.000000 -0.000001
+v -0.980785 -1.000000 -0.195091
+v -0.923879 -1.000000 -0.382684
+v -0.831469 -1.000000 -0.555571
+v -0.707106 -1.000000 -0.707108
+v -0.555569 -1.000000 -0.831470
+v -0.382682 -1.000000 -0.923880
+v -0.195089 -1.000000 -0.980786
+vn -0.259887 0.445488 -0.856737
+vn 0.087754 0.445488 -0.890977
+vn -0.422035 0.445488 -0.789574
+vn -0.567964 0.445488 -0.692068
+vn -0.692066 0.445488 -0.567966
+vn -0.789573 0.445488 -0.422037
+vn -0.856737 0.445488 -0.259889
+vn -0.890977 0.445488 -0.087754
+vn -0.890977 0.445488 0.087753
+vn -0.856737 0.445488 0.259887
+vn -0.789574 0.445488 0.422035
+vn -0.692067 0.445488 0.567964
+vn -0.567965 0.445488 0.692066
+vn -0.422036 0.445488 0.789573
+vn -0.259889 0.445488 0.856737
+vn -0.087754 0.445488 0.890977
+vn 0.087753 0.445488 0.890977
+vn 0.259888 0.445488 0.856737
+vn 0.422036 0.445488 0.789573
+vn 0.567965 0.445488 0.692067
+vn 0.692067 0.445488 0.567965
+vn 0.789573 0.445488 0.422035
+vn 0.856737 0.445488 0.259888
+vn 0.890977 0.445488 0.087753
+vn 0.890977 0.445488 -0.087754
+vn 0.856737 0.445488 -0.259888
+vn 0.789573 0.445488 -0.422036
+vn 0.692067 0.445488 -0.567965
+vn 0.567965 0.445488 -0.692067
+vn 0.422036 0.445488 -0.789573
+vn -0.087753 0.445488 -0.890977
+vn 0.259888 0.445488 -0.856737
+vn 0.000000 -1.000000 -0.000000
+usemtl Material.002
+s off
+f 32//1 2//1 33//1
+f 1//2 2//2 3//2
+f 31//3 2//3 32//3
+f 30//4 2//4 31//4
+f 29//5 2//5 30//5
+f 28//6 2//6 29//6
+f 27//7 2//7 28//7
+f 26//8 2//8 27//8
+f 25//9 2//9 26//9
+f 24//10 2//10 25//10
+f 23//11 2//11 24//11
+f 22//12 2//12 23//12
+f 21//13 2//13 22//13
+f 20//14 2//14 21//14
+f 19//15 2//15 20//15
+f 18//16 2//16 19//16
+f 17//17 2//17 18//17
+f 16//18 2//18 17//18
+f 15//19 2//19 16//19
+f 14//20 2//20 15//20
+f 13//21 2//21 14//21
+f 12//22 2//22 13//22
+f 11//23 2//23 12//23
+f 10//24 2//24 11//24
+f 9//25 2//25 10//25
+f 8//26 2//26 9//26
+f 7//27 2//27 8//27
+f 6//28 2//28 7//28
+f 5//29 2//29 6//29
+f 4//30 2//30 5//30
+f 33//31 2//31 1//31
+f 3//32 2//32 4//32
+"#;
+
+  let expected =
+    Ok(ObjSet {
+      material_library: "normal-cone.mtl".into_string(),
+      objects: vec![
+      Object {
+        name: "Cone".into_string(),
+        vertices: vec![
+          Vertex { x: 0.000000  , y: -1.000000 , z: -1.000000 },
+          Vertex { x: 0.000000  , y:  1.000000 , z: 0.000000 },
+          Vertex { x: 0.195090  , y: -1.000000 , z: -0.980785 },
+          Vertex { x: 0.382683  , y: -1.000000 , z: -0.923880 },
+          Vertex { x: 0.555570  , y: -1.000000 , z: -0.831470 },
+          Vertex { x: 0.707107  , y: -1.000000 , z: -0.707107 },
+          Vertex { x: 0.831470  , y: -1.000000 , z: -0.555570 },
+          Vertex { x: 0.923880  , y: -1.000000 , z: -0.382683 },
+          Vertex { x: 0.980785  , y: -1.000000 , z: -0.195090 },
+          Vertex { x: 1.000000  , y: -1.000000 , z: -0.000000 },
+          Vertex { x: 0.980785  , y: -1.000000 , z: 0.195090 },
+          Vertex { x: 0.923880  , y: -1.000000 , z: 0.382683 },
+          Vertex { x: 0.831470  , y: -1.000000 , z: 0.555570 },
+          Vertex { x: 0.707107  , y: -1.000000 , z: 0.707107 },
+          Vertex { x: 0.555570  , y: -1.000000 , z: 0.831470 },
+          Vertex { x: 0.382683  , y: -1.000000 , z: 0.923880 },
+          Vertex { x: 0.195090  , y: -1.000000 , z: 0.980785 },
+          Vertex { x: -0.000000 , y: -1.000000 , z: 1.000000 },
+          Vertex { x: -0.195091 , y: -1.000000 , z: 0.980785 },
+          Vertex { x: -0.382684 , y: -1.000000 , z: 0.923879 },
+          Vertex { x: -0.555571 , y: -1.000000 , z: 0.831469 },
+          Vertex { x: -0.707107 , y: -1.000000 , z: 0.707106 },
+          Vertex { x: -0.831470 , y: -1.000000 , z: 0.555570 },
+          Vertex { x: -0.923880 , y: -1.000000 , z: 0.382683 },
+          Vertex { x: -0.980785 , y: -1.000000 , z: 0.195089 },
+          Vertex { x: -1.000000 , y: -1.000000 , z: -0.000001 },
+          Vertex { x: -0.980785 , y: -1.000000 , z: -0.195091 },
+          Vertex { x: -0.923879 , y: -1.000000 , z: -0.382684 },
+          Vertex { x: -0.831469 , y: -1.000000 , z: -0.555571 },
+          Vertex { x: -0.707106 , y: -1.000000 , z: -0.707108 },
+          Vertex { x: -0.555569 , y: -1.000000 , z: -0.831470 },
+          Vertex { x: -0.382682 , y: -1.000000 , z: -0.923880 },
+          Vertex { x: -0.195089 , y: -1.000000 , z: -0.980786 }
+        ],
+        tex_vertices: vec!(),
+        normals : vec![
+          Normal { x: -0.259887 , y: 0.445488 , z: -0.856737 },
+          Normal { x: 0.087754 , y: 0.445488 , z: -0.890977 },
+          Normal { x: -0.422035 , y: 0.445488 , z: -0.789574 },
+          Normal { x: -0.567964 , y: 0.445488 , z: -0.692068 },
+          Normal { x: -0.692066 , y: 0.445488 , z: -0.567966 },
+          Normal { x: -0.789573 , y: 0.445488 , z: -0.422037 },
+          Normal { x: -0.856737 , y: 0.445488 , z: -0.259889 },
+          Normal { x: -0.890977 , y: 0.445488 , z: -0.087754 },
+          Normal { x: -0.890977 , y: 0.445488 , z: 0.087753 },
+          Normal { x: -0.856737 , y: 0.445488 , z: 0.259887 },
+          Normal { x: -0.789574 , y: 0.445488 , z: 0.422035 },
+          Normal { x: -0.692067 , y: 0.445488 , z: 0.567964 },
+          Normal { x: -0.567965 , y: 0.445488 , z: 0.692066 },
+          Normal { x: -0.422036 , y: 0.445488 , z: 0.789573 },
+          Normal { x: -0.259889 , y: 0.445488 , z: 0.856737 },
+          Normal { x: -0.087754 , y: 0.445488 , z: 0.890977 },
+          Normal { x: 0.087753 , y: 0.445488 , z: 0.890977 },
+          Normal { x: 0.259888 , y: 0.445488 , z: 0.856737 },
+          Normal { x: 0.422036 , y: 0.445488 , z: 0.789573 },
+          Normal { x: 0.567965 , y: 0.445488 , z: 0.692067 },
+          Normal { x: 0.692067 , y: 0.445488 , z: 0.567965 },
+          Normal { x: 0.789573 , y: 0.445488 , z: 0.422035 },
+          Normal { x: 0.856737 , y: 0.445488 , z: 0.259888 },
+          Normal { x: 0.890977 , y: 0.445488 , z: 0.087753 },
+          Normal { x: 0.890977 , y: 0.445488 , z: -0.087754 },
+          Normal { x: 0.856737 , y: 0.445488 , z: -0.259888 },
+          Normal { x: 0.789573 , y: 0.445488 , z: -0.422036 },
+          Normal { x: 0.692067 , y: 0.445488 , z: -0.567965 },
+          Normal { x: 0.567965 , y: 0.445488 , z: -0.692067 },
+          Normal { x: 0.422036 , y: 0.445488 , z: -0.789573 },
+          Normal { x: -0.087753 , y: 0.445488 , z: -0.890977 },
+          Normal { x: 0.259888 , y: 0.445488 , z: -0.856737 },
+          Normal { x: 0.000000 , y: -1.000000 , z: -0.000000 }
+        ],
+        geometry: vec![
+          Geometry {
+            material_name: Some("Material.002".into_string()),
+            use_smooth_shading: false,
+            shapes: vec![
+              Triangle( (32, None, Some(0))  , (31, None, Some(0))  ,  (1, None, Some(0))  ),
+              Triangle( (2, None, Some(1))   , (0, None, Some(1))   ,  (1, None, Some(1))  ),
+              Triangle( (31, None, Some(2))  , (30, None, Some(2))  ,  (1, None, Some(2))  ),
+              Triangle( (30, None, Some(3))  , (29, None, Some(3))  ,  (1, None, Some(3))  ),
+              Triangle( (29, None, Some(4))  , (28, None, Some(4))  ,  (1, None, Some(4))  ),
+              Triangle( (28, None, Some(5))  , (27, None, Some(5))  ,  (1, None, Some(5))  ),
+              Triangle( (27, None, Some(6))  , (26, None, Some(6))  ,  (1, None, Some(6))  ),
+              Triangle( (26, None, Some(7))  , (25, None, Some(7))  ,  (1, None, Some(7))  ),
+              Triangle( (25, None, Some(8))  , (24, None, Some(8))  ,  (1, None, Some(8))  ),
+              Triangle( (24, None, Some(9))  , (23, None, Some(9))  ,  (1, None, Some(9))  ),
+              Triangle( (23, None, Some(10)) , (22, None, Some(10)) ,  (1, None, Some(10)) ),
+              Triangle( (22, None, Some(11)) , (21, None, Some(11)) ,  (1, None, Some(11)) ),
+              Triangle( (21, None, Some(12)) , (20, None, Some(12)) ,  (1, None, Some(12)) ),
+              Triangle( (20, None, Some(13)) , (19, None, Some(13)) ,  (1, None, Some(13)) ),
+              Triangle( (19, None, Some(14)) , (18, None, Some(14)) ,  (1, None, Some(14)) ),
+              Triangle( (18, None, Some(15)) , (17, None, Some(15)) ,  (1, None, Some(15)) ),
+              Triangle( (17, None, Some(16)) , (16, None, Some(16)) ,  (1, None, Some(16)) ),
+              Triangle( (16, None, Some(17)) , (15, None, Some(17)) ,  (1, None, Some(17)) ),
+              Triangle( (15, None, Some(18)) , (14, None, Some(18)) ,  (1, None, Some(18)) ),
+              Triangle( (14, None, Some(19)) , (13, None, Some(19)) ,  (1, None, Some(19)) ),
+              Triangle( (13, None, Some(20)) , (12, None, Some(20)) ,  (1, None, Some(20)) ),
+              Triangle( (12, None, Some(21)) , (11, None, Some(21)) ,  (1, None, Some(21)) ),
+              Triangle( (11, None, Some(22)) , (10, None, Some(22)) ,  (1, None, Some(22)) ),
+              Triangle( (10, None, Some(23)) , (9, None, Some(23))  ,  (1, None, Some(23)) ),
+              Triangle( (9, None, Some(24))  , (8, None, Some(24))  ,  (1, None, Some(24)) ),
+              Triangle( (8, None, Some(25))  , (7, None, Some(25))  ,  (1, None, Some(25)) ),
+              Triangle( (7, None, Some(26))  , (6, None, Some(26))  ,  (1, None, Some(26)) ),
+              Triangle( (6, None, Some(27))  , (5, None, Some(27))  ,  (1, None, Some(27)) ),
+              Triangle( (5, None, Some(28))  , (4, None, Some(28))  ,  (1, None, Some(28)) ),
+              Triangle( (4, None, Some(29))  , (3, None, Some(29))  ,  (1, None, Some(29)) ),
+              Triangle( (0, None, Some(30))  , (32, None, Some(30)) ,  (1, None, Some(30)) ),
+              Triangle( (3, None, Some(31))  , (2, None, Some(31))  ,  (1, None, Some(31)) ),
+            ]
+          }
+        ]
+      }
+    ]
+  });
+  assert_eq!( parse(test_case.into_string()), expected);
 }
 
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
