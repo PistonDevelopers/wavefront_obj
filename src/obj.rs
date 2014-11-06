@@ -56,7 +56,7 @@ pub enum Shape {
 }
 
 /// A single 3-dimensional point on the corner of an object.
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 #[deriving(Clone, Copy, Show)]
 pub struct Vertex {
   pub x: f64,
@@ -65,7 +65,7 @@ pub struct Vertex {
 }
 
 /// A single 2-dimensional point on a texture. "Texure Vertex".
-#[allow(missing_doc)]
+#[allow(missing_docs)]
 #[deriving(Clone, Copy, Show)]
 pub struct TVertex {
   pub x: f64,
