@@ -7,3 +7,5 @@ format are very welcome.
 
 This is a best-effort attempt to parse the subset of .obj files exported by
 blender.
+
+[How to contribute](https://github.com/PistonDevelopers/piston/blob/master/CONTRIBUTING.md)
