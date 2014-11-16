@@ -1,6 +1,7 @@
 //! A parser for Wavefront's `.obj` file format for storing 3D meshes.
 use std::iter;
 use std::mem;
+use std::num::Float;
 use std::result::{Result,Ok,Err};
 
 use lex::{ParseError,Lexer};
