@@ -1,6 +1,7 @@
 //! A parser for Wavefront's `.mtl` file format, for storing information about
 //! the material of which a 3D mesh is composed.
 use std::iter;
+use std::num::Float;
 use std::result::{Result,Err,Ok};
 pub use lex::ParseError;
 use lex::Lexer;
