@@ -282,9 +282,9 @@ impl<'a> Parser<'a> {
   fn parse_illumination(&mut self) -> Result<Illumination, ParseError> {
     try!(self.parse_tag("illum"));
     match try!(self.parse_uint()) {
-      0 => Ok(Ambient),
-      1 => Ok(AmbientDiffuse),
-      2 => Ok(AmbientDiffuseSpecular),
+      0 => Ok(Illumination::Ambient),
+      1 => Ok(Illumination::AmbientDiffuse),
+      2 => Ok(Illumination::AmbientDiffuseSpecular),
       n => self.error(format!("Unknown illumination model: {}.", n))
     }
   }
