@@ -376,6 +376,8 @@ pub fn parse(mut input: String) -> Result<MtlSet, ParseError> {
 
 #[test]
 fn test_parse() {
+  use self::Illumination::{ AmbientDiffuseSpecular };
+
   let test_case =
 r#"
 # Blender MTL File: 'None'
@@ -444,6 +446,8 @@ illum 2
 
 #[test]
 fn test_cube() {
+  use self::Illumination::{ AmbientDiffuseSpecular };
+
   let test_case =
 r#"
 # Blender MTL File: 'cube.blend'
