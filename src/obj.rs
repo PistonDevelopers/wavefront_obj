@@ -153,8 +153,8 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
   match xs.len() {
     0 => return vec!(),
-    1 => return vec!(Point(xs[0])),
-    2 => return vec!(Line(xs[0], xs[1])),
+    1 => return vec!(Shape::Point(xs[0])),
+    2 => return vec!(Shape::Line(xs[0], xs[1])),
     _ => {},
   }
 
@@ -163,7 +163,7 @@ fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
   xs.slice_to(xs.len()-1)
     .iter()
     .zip(xs.slice(1, xs.len()-1).iter())
-    .map(|(&x, &y)| Triangle(last_elem, x, y))
+    .map(|(&x, &y)| Shape::Triangle(last_elem, x, y))
     .collect()
 }
 
