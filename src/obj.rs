@@ -169,6 +169,8 @@ fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
 
 #[test]
 fn test_to_triangles() {
+  use self::Shape::{ Line, Point, Triangle };
+
   assert_eq!(to_triangles(&[]), vec!());
 
   assert_eq!(to_triangles(&[(3,None, None)]), vec!(Point((3,None, None))));
@@ -698,6 +700,8 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_parse() {
+  use self::Shape::{ Line, Triangle };
+
   let test_case =
 r#"
 # Blender v2.69 (sub 0) OBJ File: ''
@@ -965,6 +969,8 @@ f 45 41 44 48
 
 #[test]
 fn test_cube() {
+  use self::Shape::{ Triangle };
+
   let test_case =
 r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
@@ -1065,6 +1071,8 @@ f 5/5 1/13 4/14 8/6
 
 #[test]
 fn test_normals_no_tex() {
+  use self::Shape::{ Triangle };  
+
   let test_case =
 r#"
 # Blender v2.70 (sub 4) OBJ File: ''
