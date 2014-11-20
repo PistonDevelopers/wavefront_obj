@@ -40,7 +40,7 @@ pub struct Geometry {
   /// A reference to the material to apply to this geometry.
   pub material_name: Option<String>,
   /// Should we use smooth shading when rendering this?
-  pub use_smooth_shading: bool,
+  pub smooth_shading_group: uint,
   /// The shapes of which this geometry is composed.
   pub shapes: Vec<Shape>,
 }
@@ -453,13 +453,15 @@ impl<'a> Parser<'a> {
     self.parse_str()
   }
 
-  fn parse_smooth_shading(&mut self) -> Result<bool, ParseError> {
+  fn parse_smooth_shading(&mut self) -> Result<uint, ParseError> {
     try!(self.parse_tag("s"));
 
     match try!(self.parse_str()).as_slice() {
-      "on"  => Ok(true),
-      "off" => Ok(false),
-      s     => self.error(format!("Expected `on` or `off` but got {}.", s)),
+      "off" => Ok(0),
+      s     => match from_str::<uint>(s) {
+        Some(ret) => Ok(ret),
+        None => self.error(format!("Expected an unsigned int or `off` but got {}.", s)),
+      }
     }
   }
 
@@ -564,7 +566,7 @@ impl<'a> Parser<'a> {
     let mut shapes = Vec::new();
 
     let mut current_material   = None;
-    let mut use_smooth_shading = false;
+    let mut smooth_shading_group = 0;
 
     loop {
       match sliced(&self.peek()) {
@@ -575,21 +577,21 @@ impl<'a> Parser<'a> {
               Some(try!(self.parse_usemtl())));
 
           result.push(Geometry {
-            material_name:      old_material,
-            use_smooth_shading: use_smooth_shading,
-            shapes:             mem::replace(&mut shapes, Vec::new()),
+            material_name:        old_material,
+            smooth_shading_group: smooth_shading_group,
+            shapes:               mem::replace(&mut shapes, Vec::new()),
           });
         },
         Some("s") => {
           let old_smooth_shading =
             mem::replace(
-              &mut use_smooth_shading,
+              &mut smooth_shading_group,
               try!(self.parse_smooth_shading()));
 
           result.push(Geometry {
-            material_name:      current_material.clone(),
-            use_smooth_shading: old_smooth_shading,
-            shapes:             mem::replace(&mut shapes, Vec::new()),
+            material_name:        current_material.clone(),
+            smooth_shading_group: old_smooth_shading,
+            shapes:               mem::replace(&mut shapes, Vec::new()),
           })
         },
         Some("f") | Some("l") => {
@@ -604,7 +606,7 @@ impl<'a> Parser<'a> {
 
     result.push(Geometry {
       material_name:      current_material,
-      use_smooth_shading: use_smooth_shading,
+      smooth_shading_group: smooth_shading_group,
       shapes:             shapes,
     });
 
@@ -829,7 +831,7 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: Some("None".into_string()),
-              use_smooth_shading: false,
+              smooth_shading_group: 0,
               shapes: vec!(
                 Triangle((0, None, None), (4, None, None), (5, None, None)),
                 Triangle((0, None, None), (5, None, None), (1, None, None)),
@@ -888,7 +890,7 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: None,
-              use_smooth_shading: false,
+              smooth_shading_group: 0,
               shapes: vec!(
                 Line((1, None, None), (0, None, None)),
                 Line((2, None, None), (1, None, None)),
@@ -943,7 +945,7 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: Some("Material".into_string()),
-              use_smooth_shading: false,
+              smooth_shading_group: 0,
               shapes: vec!(
                 Triangle((3, None, None), (0, None, None), (1, None, None)),
                 Triangle((3, None, None), (1, None, None), (2, None, None)),
@@ -1045,7 +1047,7 @@ f 5/5 1/13 4/14 8/6
           geometry: vec![
             Geometry {
               material_name: Some("Material".into_string()),
-              use_smooth_shading: false,
+              smooth_shading_group: 0,
               shapes: vec![
                 Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
                 Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)),
@@ -1261,7 +1263,7 @@ f 3//32 2//32 4//32
         geometry: vec![
           Geometry {
             material_name: Some("Material.002".into_string()),
-            use_smooth_shading: false,
+            smooth_shading_group: 0,
             shapes: vec![
               Triangle( (32, None, Some(0))  , (31, None, Some(0))  ,  (1, None, Some(0))  ),
               Triangle( (2, None, Some(1))   , (0, None, Some(1))   ,  (1, None, Some(1))  ),
@@ -1303,6 +1305,242 @@ f 3//32 2//32 4//32
   });
   assert_eq!( parse(test_case.into_string()), expected);
 }
+
+
+#[test]
+fn test_smooth_shading_groups() {
+  use self::Shape::{ Triangle };
+
+  let test_case =
+r#"
+# Blender v2.72 (sub 0) OBJ File: 'dome.blend'
+# www.blender.org
+mtllib dome.mtl
+o Dome
+v -0.382683 0.923880 0.000000
+v -0.707107 0.707107 0.000000
+v -0.923880 0.382683 0.000000
+v -1.000000 -0.000000 0.000000
+v -0.270598 0.923880 -0.270598
+v -0.500000 0.707107 -0.500000
+v -0.653282 0.382683 -0.653281
+v -0.707107 -0.000000 -0.707107
+v -0.000000 0.923880 -0.382683
+v -0.000000 0.707107 -0.707107
+v -0.000000 0.382683 -0.923879
+v -0.000000 -0.000000 -1.000000
+v -0.000000 1.000000 0.000000
+v 0.270598 0.923880 -0.270598
+v 0.500000 0.707107 -0.500000
+v 0.653281 0.382683 -0.653281
+v 0.707106 -0.000000 -0.707107
+v 0.382683 0.923880 -0.000000
+v 0.707106 0.707107 -0.000000
+v 0.923879 0.382683 -0.000000
+v 1.000000 -0.000000 -0.000000
+v 0.270598 0.923880 0.270598
+v 0.500000 0.707107 0.500000
+v 0.653281 0.382683 0.653281
+v 0.707106 -0.000000 0.707107
+v -0.000000 0.923880 0.382683
+v -0.000000 0.707107 0.707107
+v -0.000000 0.382683 0.923879
+v -0.000000 -0.000000 1.000000
+v -0.270598 0.923880 0.270598
+v -0.500000 0.707107 0.500000
+v -0.653281 0.382683 0.653281
+v -0.707107 -0.000000 0.707107
+usemtl None
+s 1
+f 4 3 7
+f 3 2 6
+f 1 5 6
+f 7 11 12
+f 6 10 11
+f 5 9 10
+f 11 16 17
+f 11 10 15
+f 10 9 14
+f 16 20 21
+f 15 19 20
+f 14 18 19
+f 20 24 25
+f 20 19 23
+f 18 22 23
+f 24 28 29
+f 24 23 27
+f 23 22 26
+f 28 32 33
+f 28 27 31
+f 27 26 30
+f 1 13 5
+f 5 13 9
+f 9 13 14
+f 14 13 18
+f 18 13 22
+f 22 13 26
+f 26 13 30
+f 32 3 4
+f 31 2 3
+f 30 1 2
+f 30 13 1
+f 8 4 7
+f 7 3 6
+f 2 1 6
+f 8 7 12
+f 7 6 11
+f 6 5 10
+f 12 11 17
+f 16 11 15
+f 15 10 14
+f 17 16 21
+f 16 15 20
+f 15 14 19
+f 21 20 25
+f 24 20 23
+f 19 18 23
+f 25 24 29
+f 28 24 27
+f 27 23 26
+f 29 28 33
+f 32 28 31
+f 31 27 30
+f 33 32 4
+f 32 31 3
+f 31 30 2
+s 2
+f 33 4 8
+f 29 33 25
+f 12 17 21
+f 12 33 8
+f 33 21 25
+f 21 33 12
+"#;
+
+  let expected =
+    Ok(ObjSet {
+      material_library: "dome.mtl".into_string(),
+      objects: vec![
+        Object {
+          name: "Dome".into_string(),
+          vertices: vec![
+            Vertex { x: -0.382683, y: 0.92388, z: 0.0 },
+            Vertex { x: -0.707107, y: 0.707107, z: 0.0 },
+            Vertex { x: -0.92388, y: 0.382683, z: 0.0 },
+            Vertex { x: -1.0, y: 0.0, z: 0.0 },
+            Vertex { x: -0.270598, y: 0.92388, z: -0.270598 },
+            Vertex { x: -0.5, y: 0.707107, z: -0.5 },
+            Vertex { x: -0.653282, y: 0.382683, z: -0.653281 },
+            Vertex { x: -0.707107, y: 0.0, z: -0.707107 },
+            Vertex { x: 0.0, y: 0.92388, z: -0.382683 },
+            Vertex { x: 0.0, y: 0.707107, z: -0.707107 },
+            Vertex { x: 0.0, y: 0.382683, z: -0.923879 },
+            Vertex { x: 0.0, y: 0.0, z: -1.0 },
+            Vertex { x: 0.0, y: 1.0, z: 0.0 },
+            Vertex { x: 0.270598, y: 0.92388, z: -0.270598 },
+            Vertex { x: 0.5, y: 0.707107, z: -0.5 },
+            Vertex { x: 0.653281, y: 0.382683, z: -0.653281 },
+            Vertex { x: 0.707106, y: 0.0, z: -0.707107 },
+            Vertex { x: 0.382683, y: 0.92388, z: 0.0 },
+            Vertex { x: 0.707106, y: 0.707107, z: 0.0 },
+            Vertex { x: 0.923879, y: 0.382683, z: 0.0 },
+            Vertex { x: 1.0, y: 0.0, z: 0.0 },
+            Vertex { x: 0.270598, y: 0.92388, z: 0.270598 },
+            Vertex { x: 0.5, y: 0.707107, z: 0.5 },
+            Vertex { x: 0.653281, y: 0.382683, z: 0.653281 },
+            Vertex { x: 0.707106, y: 0.0, z: 0.707107 },
+            Vertex { x: 0.0, y: 0.92388, z: 0.382683 },
+            Vertex { x: 0.0, y: 0.707107, z: 0.707107 },
+            Vertex { x: 0.0, y: 0.382683, z: 0.923879 },
+            Vertex { x: 0.0, y: 0.0, z: 1.0 },
+            Vertex { x: -0.270598, y: 0.92388, z: 0.270598 },
+            Vertex { x: -0.5, y: 0.707107, z: 0.5 },
+            Vertex { x: -0.653281, y: 0.382683, z: 0.653281 },
+            Vertex { x: -0.707107, y: 0.0, z: 0.707107 }],
+          tex_vertices: vec![],
+          normals: vec![],
+          geometry: vec![
+            Geometry {
+              material_name: Some("None".into_string()),
+              smooth_shading_group: 1,
+              shapes: vec![
+                Triangle((6, None, None), (3, None, None), (2, None, None)),
+                Triangle((5, None, None), (2, None, None), (1, None, None)),
+                Triangle((5, None, None), (0, None, None), (4, None, None)),
+                Triangle((11, None, None), (6, None, None), (10, None, None)),
+                Triangle((10, None, None), (5, None, None), (9, None, None)),
+                Triangle((9, None, None), (4, None, None), (8, None, None)),
+                Triangle((16, None, None), (10, None, None), (15, None, None)),
+                Triangle((14, None, None), (10, None, None), (9, None, None)),
+                Triangle((13, None, None), (9, None, None), (8, None, None)),
+                Triangle((20, None, None), (15, None, None), (19, None, None)),
+                Triangle((19, None, None), (14, None, None), (18, None, None)),
+                Triangle((18, None, None), (13, None, None), (17, None, None)),
+                Triangle((24, None, None), (19, None, None), (23, None, None)),
+                Triangle((22, None, None), (19, None, None), (18, None, None)),
+                Triangle((22, None, None), (17, None, None), (21, None, None)),
+                Triangle((28, None, None), (23, None, None), (27, None, None)),
+                Triangle((26, None, None), (23, None, None), (22, None, None)),
+                Triangle((25, None, None), (22, None, None), (21, None, None)),
+                Triangle((32, None, None), (27, None, None), (31, None, None)),
+                Triangle((30, None, None), (27, None, None), (26, None, None)),
+                Triangle((29, None, None), (26, None, None), (25, None, None)),
+                Triangle((4, None, None), (0, None, None), (12, None, None)),
+                Triangle((8, None, None), (4, None, None), (12, None, None)),
+                Triangle((13, None, None), (8, None, None), (12, None, None)),
+                Triangle((17, None, None), (13, None, None), (12, None, None)),
+                Triangle((21, None, None), (17, None, None), (12, None, None)),
+                Triangle((25, None, None), (21, None, None), (12, None, None)),
+                Triangle((29, None, None), (25, None, None), (12, None, None)),
+                Triangle((3, None, None), (31, None, None), (2, None, None)),
+                Triangle((2, None, None), (30, None, None), (1, None, None)),
+                Triangle((1, None, None), (29, None, None), (0, None, None)),
+                Triangle((0, None, None), (29, None, None), (12, None, None)),
+                Triangle((6, None, None), (7, None, None), (3, None, None)),
+                Triangle((5, None, None), (6, None, None), (2, None, None)),
+                Triangle((5, None, None), (1, None, None), (0, None, None)),
+                Triangle((11, None, None), (7, None, None), (6, None, None)),
+                Triangle((10, None, None), (6, None, None), (5, None, None)),
+                Triangle((9, None, None), (5, None, None), (4, None, None)),
+                Triangle((16, None, None), (11, None, None), (10, None, None)),
+                Triangle((14, None, None), (15, None, None), (10, None, None)),
+                Triangle((13, None, None), (14, None, None), (9, None, None)),
+                Triangle((20, None, None), (16, None, None), (15, None, None)),
+                Triangle((19, None, None), (15, None, None), (14, None, None)),
+                Triangle((18, None, None), (14, None, None), (13, None, None)),
+                Triangle((24, None, None), (20, None, None), (19, None, None)),
+                Triangle((22, None, None), (23, None, None), (19, None, None)),
+                Triangle((22, None, None), (18, None, None), (17, None, None)),
+                Triangle((28, None, None), (24, None, None), (23, None, None)),
+                Triangle((26, None, None), (27, None, None), (23, None, None)),
+                Triangle((25, None, None), (26, None, None), (22, None, None)),
+                Triangle((32, None, None), (28, None, None), (27, None, None)),
+                Triangle((30, None, None), (31, None, None), (27, None, None)),
+                Triangle((29, None, None), (30, None, None), (26, None, None)),
+                Triangle((3, None, None), (32, None, None), (31, None, None)),
+                Triangle((2, None, None), (31, None, None), (30, None, None)),
+                Triangle((1, None, None), (30, None, None), (29, None, None))] },
+            Geometry {
+              material_name: Some("None".into_string()),
+              smooth_shading_group: 2,
+              shapes: vec![
+                Triangle((7, None, None), (32, None, None), (3, None, None)),
+                Triangle((24, None, None), (28, None, None), (32, None, None)),
+                Triangle((20, None, None), (11, None, None), (16, None, None)),
+                Triangle((7, None, None), (11, None, None), (32, None, None)),
+                Triangle((24, None, None), (32, None, None), (20, None, None)),
+                Triangle((11, None, None), (20, None, None), (32, None, None))]
+            }
+          ]
+        }
+      ]
+    }
+  );
+
+
+  assert_eq!(parse(test_case.into_string()), expected);
+}
+
 
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
 /// file, or an error. Support in this parser for the full file format is
