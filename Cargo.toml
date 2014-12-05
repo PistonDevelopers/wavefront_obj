@@ -1,6 +1,6 @@
 [package]
 
-name = "wavefront-obj"
+name = "wavefront_obj"
 version = "0.0.0"
 authors = [
     "Clark Gaebel <cg.wowus.cg@gmail.com>",
@@ -8,5 +8,5 @@ authors = [
 
 [lib]
 
-name = "wavefront-obj"
+name = "wavefront_obj"
 path = "./src/lib.rs"
