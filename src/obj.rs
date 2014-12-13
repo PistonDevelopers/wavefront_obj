@@ -48,7 +48,7 @@ pub struct Geometry {
 ///
 /// Convex polygons more complicated than a triangle are automatically
 /// converted into triangles.
-#[deriving(Clone, Show, Hash, PartialEq)]
+#[deriving(Clone, Copy, Show, Hash, PartialEq)]
 pub enum Shape {
   /// A point specified by its position.
   Point(VTIndex),
