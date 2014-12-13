@@ -2,7 +2,6 @@
 use std::iter;
 use std::mem;
 use std::num::Float;
-use std::result::{Result,Ok,Err};
 
 use lex::{ParseError,Lexer};
 
