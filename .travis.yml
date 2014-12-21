@@ -8,11 +8,12 @@ env:
     global:
         - secure: Cjl/01MsEBnDyRq0o/oQomjyYib7Td5mCDnSvaF7xQkVKj7t/TYWI3r+MRr7Wrbq5zJ+aNzHGrAxO2W63g0DB/LDnbZdMoQhyLBCvbBqsnM0RW9P8CCT7kcZuyaNShjzo64HllwfcC8fZBws/2kOzBIVBF+xJP+ljH0p1p3RQEw=
 before_script:
-    - rustc -v
+    - rustc --version
     - cargo -V
 script:
     - cargo build -v
     - cargo test -v
+    - cargo bench -v
     - cargo doc -v
 after_success:
     - cp -R target/doc doc
