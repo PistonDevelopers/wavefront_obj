@@ -249,7 +249,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-  fn new<'a>(input: &'a str) -> Parser<'a> {
+  fn new(input: &'a str) -> Parser<'a> {
     Parser {
       line_number: 1,
       lexer: Lexer::new(input).peekable(),
@@ -338,7 +338,7 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_material_library<'a>(&mut self) -> Result<String, ParseError> {
+  fn parse_material_library(&mut self) -> Result<String, ParseError> {
     try!(self.parse_tag("mtllib"));
     self.parse_str()
   }
@@ -1072,7 +1072,7 @@ f 5/5 1/13 4/14 8/6
 
 #[test]
 fn test_normals_no_tex() {
-  use self::Shape::{ Triangle };  
+  use self::Shape::{ Triangle };
 
   let test_case =
 r#"

@@ -94,7 +94,7 @@ impl PartialOrd for Material {
       .cmp(&fuzzy_opt_cmp(self.optical_density, other.optical_density, 0.00001))
       .cmp(&fuzzy_cmp(self.alpha, other.alpha, 0.00001))
       .cmp(&self.illumination.cmp(&other.illumination))
-      .cmp(&self.uv_map.cmp(&other.uv_map))) 
+      .cmp(&self.uv_map.cmp(&other.uv_map)))
   }
 }
 
@@ -113,7 +113,7 @@ struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-  fn new<'a>(input: &'a str) -> Parser<'a> {
+  fn new(input: &'a str) -> Parser<'a> {
     Parser {
       line_number: 1,
       lexer: Lexer::new(input).peekable(),

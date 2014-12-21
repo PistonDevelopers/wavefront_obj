@@ -16,7 +16,7 @@ fn is_whitespace(c: u8) -> bool {
 }
 
 pub struct Lexer<'a> {
-  bytes: iter::Peekable<u8, iter::Map<'a, &'a u8, u8, slice::Items<'a, u8>>>,
+  bytes: iter::Peekable<u8, iter::Map<&'a u8, u8, slice::Items<'a, u8>, fn(&u8) -> u8>>,
   current_line_number: uint,
 }
 
@@ -42,7 +42,8 @@ impl<'a> Lexer<'a> {
 
   /// Looks at the next character the lexer is pointing to.
   fn peek(&mut self) -> Option<u8> {
-    self.bytes.peek().map(|c| *c)
+    fn deref_u8(x: &u8) -> u8 { *x }
+    self.bytes.peek().map(deref_u8)
   }
 
   /// Advance past characters until the given condition is true.
