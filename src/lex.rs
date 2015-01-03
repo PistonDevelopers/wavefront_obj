@@ -1,5 +1,5 @@
 use std::iter;
-use std::slice;
+use std::str;
 
 /// A parsing error, with location information.
 #[deriving(Show, PartialEq)]
@@ -16,7 +16,7 @@ fn is_whitespace(c: u8) -> bool {
 }
 
 pub struct Lexer<'a> {
-  bytes: iter::Peekable<u8, iter::Map<&'a u8, u8, slice::Items<'a, u8>, fn(&u8) -> u8>>,
+  bytes: iter::Peekable<u8, str::Bytes<'a>>,
   current_line_number: uint,
 }
 

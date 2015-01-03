@@ -2,6 +2,7 @@
 use std::iter;
 use std::mem;
 use std::num::Float;
+use std::borrow::ToOwned;
 
 use lex::{ParseError,Lexer};
 
@@ -353,7 +354,7 @@ impl<'a> Parser<'a> {
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = try!(self.parse_str());
 
-    match from_str::<f64>(s.as_slice()) {
+    match s.as_slice().parse() {
       None =>
         self.error(format!("Expected f64 but got {}.", s)),
       Some(ret) =>
@@ -457,7 +458,7 @@ impl<'a> Parser<'a> {
 
     match try!(self.parse_str()).as_slice() {
       "off" => Ok(0),
-      s     => match from_str::<uint>(s) {
+      s     => match s.parse() {
         Some(ret) => Ok(ret),
         None => self.error(format!("Expected an unsigned int or `off` but got {}.", s)),
       }
@@ -465,7 +466,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_int_from(&mut self, s: &str) -> Result<int, ParseError> {
-    match from_str::<int>(s) {
+    match s.parse() {
       None =>
         return self.error(format!("Expected int but got {}.", s)),
       Some(ret) =>
@@ -477,7 +478,7 @@ impl<'a> Parser<'a> {
                   valid_nx: (uint, uint) ) -> Result<VTIndex, ParseError> {
     match sliced(&self.next()) {
       None =>
-        return self.error("Expected vertex index but got end of input.".into_string()),
+        return self.error("Expected vertex index but got end of input.".to_owned()),
       Some(s) => {
         let splits: Vec<&str> = s.split('/').collect();
         assert!(splits.len() != 0);
@@ -540,7 +541,7 @@ impl<'a> Parser<'a> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
-      None      => return self.error("Expected `f` or `l` but got end of input.".into_string()),
+      None      => return self.error("Expected `f` or `l` but got end of input.".to_owned()),
       Some(s)   => return self.error(format!("Expected `f` or `l` but got {}.", s)),
     }
 
@@ -811,10 +812,10 @@ f 45 41 44 48
 
   let expected =
      Ok(ObjSet {
-      material_library: "untitled.mtl".into_string(),
+      material_library: "untitled.mtl".to_owned(),
       objects: vec!(
         Object {
-          name: "Cube.001".into_string(),
+          name: "Cube.001".to_owned(),
           vertices: vec!(
             Vertex { x: -1.0, y: -1.0, z: 1.0 },
             Vertex { x: -1.0, y: -1.0, z: -1.0 },
@@ -829,7 +830,7 @@ f 45 41 44 48
           normals: vec!(),
           geometry: vec!(
             Geometry {
-              material_name: Some("None".into_string()),
+              material_name: Some("None".to_owned()),
               smooth_shading_group: 0,
               shapes: vec!(
                 Triangle((0, None, None), (4, None, None), (5, None, None)),
@@ -849,7 +850,7 @@ f 45 41 44 48
           )
         },
         Object {
-          name: "Circle".into_string(),
+          name: "Circle".to_owned(),
           vertices: vec!(
             Vertex { x: 0.0, y: 0.0, z: -1.0 },
             Vertex { x: -0.19509, y: 0.0, z: -0.980785 },
@@ -928,7 +929,7 @@ f 45 41 44 48
           )
         },
         Object {
-          name: "Cube".into_string(),
+          name: "Cube".to_owned(),
           vertices: vec!(
             Vertex { x: 1.0, y: -1.0, z: -1.0 },
             Vertex { x: 1.0, y: -1.0, z: 1.0 },
@@ -943,7 +944,7 @@ f 45 41 44 48
           normals: vec!(),
           geometry: vec!(
             Geometry {
-              material_name: Some("Material".into_string()),
+              material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
               shapes: vec!(
                 Triangle((3, None, None), (0, None, None), (1, None, None)),
@@ -965,7 +966,7 @@ f 45 41 44 48
       )
     });
 
-  assert_eq!(parse(test_case.into_string()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
@@ -1012,10 +1013,10 @@ f 5/5 1/13 4/14 8/6
 
   let expected =
     Ok(ObjSet {
-      material_library: "cube.mtl".into_string(),
+      material_library: "cube.mtl".to_owned(),
       objects: vec![
         Object {
-          name: "Cube".into_string(),
+          name: "Cube".to_owned(),
           vertices: vec![
             Vertex { x:  1.0, y: -1.0, z: -1.0 },
             Vertex { x:  1.0, y: -1.0, z:  1.0 },
@@ -1045,7 +1046,7 @@ f 5/5 1/13 4/14 8/6
           normals : vec![],
           geometry: vec![
             Geometry {
-              material_name: Some("Material".into_string()),
+              material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
               shapes: vec![
                 Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
@@ -1067,7 +1068,7 @@ f 5/5 1/13 4/14 8/6
       ]
     });
 
-  assert_eq!(parse(test_case.into_string()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
@@ -1184,10 +1185,10 @@ f 3//32 2//32 4//32
 
   let expected =
     Ok(ObjSet {
-      material_library: "normal-cone.mtl".into_string(),
+      material_library: "normal-cone.mtl".to_owned(),
       objects: vec![
       Object {
-        name: "Cone".into_string(),
+        name: "Cone".to_owned(),
         vertices: vec![
           Vertex { x: 0.000000  , y: -1.000000 , z: -1.000000 },
           Vertex { x: 0.000000  , y:  1.000000 , z: 0.000000 },
@@ -1261,7 +1262,7 @@ f 3//32 2//32 4//32
         ],
         geometry: vec![
           Geometry {
-            material_name: Some("Material.002".into_string()),
+            material_name: Some("Material.002".to_owned()),
             smooth_shading_group: 0,
             shapes: vec![
               Triangle( (32, None, Some(0))  , (31, None, Some(0))  ,  (1, None, Some(0))  ),
@@ -1302,7 +1303,7 @@ f 3//32 2//32 4//32
       }
     ]
   });
-  assert_eq!( parse(test_case.into_string()), expected);
+  assert_eq!( parse(test_case.to_owned()), expected);
 }
 
 
@@ -1418,10 +1419,10 @@ f 21 33 12
 
   let expected =
     Ok(ObjSet {
-      material_library: "dome.mtl".into_string(),
+      material_library: "dome.mtl".to_owned(),
       objects: vec![
         Object {
-          name: "Dome".into_string(),
+          name: "Dome".to_owned(),
           vertices: vec![
             Vertex { x: -0.382683, y: 0.92388, z: 0.0 },
             Vertex { x: -0.707107, y: 0.707107, z: 0.0 },
@@ -1460,7 +1461,7 @@ f 21 33 12
           normals: vec![],
           geometry: vec![
             Geometry {
-              material_name: Some("None".into_string()),
+              material_name: Some("None".to_owned()),
               smooth_shading_group: 1,
               shapes: vec![
                 Triangle((6, None, None), (3, None, None), (2, None, None)),
@@ -1520,7 +1521,7 @@ f 21 33 12
                 Triangle((2, None, None), (31, None, None), (30, None, None)),
                 Triangle((1, None, None), (30, None, None), (29, None, None))] },
             Geometry {
-              material_name: Some("None".into_string()),
+              material_name: Some("None".to_owned()),
               smooth_shading_group: 2,
               shapes: vec![
                 Triangle((7, None, None), (32, None, None), (3, None, None)),
@@ -1537,7 +1538,7 @@ f 21 33 12
   );
 
 
-  assert_eq!(parse(test_case.into_string()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 

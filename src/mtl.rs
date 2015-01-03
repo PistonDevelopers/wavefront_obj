@@ -2,6 +2,8 @@
 //! the material of which a 3D mesh is composed.
 use std::iter;
 use std::num::Float;
+use std::borrow::ToOwned;
+
 pub use lex::ParseError;
 use lex::Lexer;
 
@@ -168,7 +170,7 @@ impl<'a> Parser<'a> {
   /// Skips over some newlines, failing if it didn't manage to skip any.
   fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
     match sliced(&self.peek()) {
-      None => return self.error("Expected newline but got end of input.".into_string()),
+      None => return self.error("Expected newline but got end of input.".to_owned()),
       Some("\n") => {},
       Some(s) => return self.error(format!("Expected newline but got {}", s)),
     }
@@ -180,13 +182,13 @@ impl<'a> Parser<'a> {
 
   fn parse_newmtl(&mut self) -> Result<String, ParseError> {
     match sliced(&self.next()) {
-      None => return self.error("Expected `newmtl` but got end of input.".into_string()),
+      None => return self.error("Expected `newmtl` but got end of input.".to_owned()),
       Some("newmtl") => {},
       Some(s) => return self.error(format!("Expected `newmtl` but got {}.", s)),
     }
 
     match self.next() {
-      None => return self.error("Expected material name but got end of input.".into_string()),
+      None => return self.error("Expected material name but got end of input.".to_owned()),
       Some(s) => Ok(s),
     }
   }
@@ -194,9 +196,9 @@ impl<'a> Parser<'a> {
   fn parse_f64(&mut self) -> Result<f64, ParseError> {
     match sliced(&self.next()) {
       None =>
-        return self.error("Expected f64 but got end of input.".into_string()),
+        return self.error("Expected f64 but got end of input.".to_owned()),
       Some(s) => {
-        match from_str::<f64>(s) {
+        match s.parse() {
           None =>
             return self.error(format!("Expected f64 but got {}.", s)),
           Some(ret) =>
@@ -209,9 +211,9 @@ impl<'a> Parser<'a> {
   fn parse_uint(&mut self) -> Result<uint, ParseError> {
     match sliced(&self.next()) {
       None =>
-        return self.error("Expected uint but got end of input.".into_string()),
+        return self.error("Expected uint but got end of input.".to_owned()),
       Some(s) => {
-        match from_str::<uint>(s) {
+        match s.parse() {
           None =>
             return self.error(format!("Expected uint but got {}.", s)),
           Some(ret) =>
@@ -297,7 +299,7 @@ impl<'a> Parser<'a> {
     try!(self.parse_tag("map_Kd"));
     match self.next() {
       None =>
-        self.error("Expected texture path but got end of input.".into_string()),
+        self.error("Expected texture path but got end of input.".to_owned()),
       Some(s) =>
         Ok(Some(s))
     }
@@ -416,7 +418,7 @@ illum 2
     Ok(MtlSet {
       materials: vec!(
         Material {
-          name: "Material".into_string(),
+          name: "Material".to_owned(),
           specular_coefficient: 96.078431,
           color_ambient:  Color { r: 0.0,  g: 0.0,  b: 0.0  },
           color_diffuse:  Color { r: 0.64, g: 0.64, b: 0.64 },
@@ -427,7 +429,7 @@ illum 2
           uv_map: None,
         },
         Material {
-          name: "None".into_string(),
+          name: "None".to_owned(),
           specular_coefficient: 0.0,
           color_ambient:  Color { r: 0.0, g: 0.0, b: 0.0 },
           color_diffuse:  Color { r: 0.8, g: 0.8, b: 0.8 },
@@ -440,7 +442,7 @@ illum 2
       )
     });
 
-  assert_eq!(parse(test_case.into_string()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
@@ -467,7 +469,7 @@ map_Kd cube-uv-num.png
     Ok(MtlSet {
       materials: vec!(
         Material {
-          name: "Material".into_string(),
+          name: "Material".to_owned(),
           specular_coefficient: 96.078431,
           color_ambient:  Color { r: 0.0,  g: 0.0,  b: 0.0  },
           color_diffuse:  Color { r: 0.64, g: 0.64, b: 0.64 },
@@ -475,9 +477,9 @@ map_Kd cube-uv-num.png
           optical_density: Some(1.0),
           alpha: 1.0,
           illumination: AmbientDiffuseSpecular,
-          uv_map: Some("cube-uv-num.png".into_string()),
+          uv_map: Some("cube-uv-num.png".to_owned()),
         })
     });
 
-  assert_eq!(parse(test_case.into_string()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
