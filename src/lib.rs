@@ -2,6 +2,7 @@
 #![crate_type = "lib"]
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![feature(associated_types)]
 
 pub use lex::ParseError;
 

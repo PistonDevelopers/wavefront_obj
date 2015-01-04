@@ -1,5 +1,7 @@
 //! A parser for Wavefront's `.mtl` file format, for storing information about
 //! the material of which a 3D mesh is composed.
+use std::cmp::Ordering;
+use std::cmp::Ordering::{Equal, Less, Greater};
 use std::iter;
 use std::num::Float;
 use std::borrow::ToOwned;
@@ -8,7 +10,7 @@ pub use lex::ParseError;
 use lex::Lexer;
 
 /// A set of materials in one `.mtl` file.
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 #[allow(missing_docs)]
 pub struct MtlSet {
   pub materials: Vec<Material>,
@@ -16,7 +18,7 @@ pub struct MtlSet {
 
 /// A single material that can be applied to any face. They are generally
 /// applied by using the Phong shading model.
-#[deriving(Clone, Show)]
+#[derive(Clone, Show)]
 #[allow(missing_docs)]
 pub struct Material {
   pub name: String,
@@ -31,7 +33,7 @@ pub struct Material {
 }
 
 /// How a given material is supposed to be illuminated.
-#[deriving(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
 #[allow(missing_docs)]
 pub enum Illumination {
   Ambient,
@@ -39,7 +41,7 @@ pub enum Illumination {
   AmbientDiffuseSpecular,
 }
 
-#[deriving(Clone, Copy, Show)]
+#[derive(Clone, Copy, Show)]
 #[allow(missing_docs)]
 pub struct Color {
   pub r: f64,
