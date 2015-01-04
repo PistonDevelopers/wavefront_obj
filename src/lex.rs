@@ -2,7 +2,7 @@ use std::iter;
 use std::str;
 
 /// A parsing error, with location information.
-#[deriving(Show, PartialEq)]
+#[derive(Show, PartialEq)]
 pub struct ParseError {
   /// The line of input the error is on.
   pub line_number:   uint,
@@ -140,7 +140,9 @@ impl<'a> Lexer<'a> {
   }
 }
 
-impl<'a> Iterator<String> for Lexer<'a> {
+impl<'a> Iterator for Lexer<'a> {
+  type Item = String;
+
   fn next(&mut self) -> Option<String> {
     self.next_word().map(|buf| {
       match String::from_utf8(buf) {

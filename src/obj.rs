@@ -1,4 +1,6 @@
 //! A parser for Wavefront's `.obj` file format for storing 3D meshes.
+use std::cmp::Ordering;
+use std::cmp::Ordering::{Equal, Less, Greater};
 use std::iter;
 use std::mem;
 use std::num::Float;
@@ -7,7 +9,7 @@ use std::borrow::ToOwned;
 use lex::{ParseError,Lexer};
 
 /// A set of objects, as listed in an `.obj` file.
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 pub struct ObjSet {
   /// Which material library to use.
   pub material_library: String,
@@ -16,7 +18,7 @@ pub struct ObjSet {
 }
 
 /// A mesh object.
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 pub struct Object {
   /// A human-readable name for this object. This can be set in blender.
   pub name: String,
@@ -35,7 +37,7 @@ pub struct Object {
 }
 
 /// A set of shapes, all using the given material.
-#[deriving(Clone, Show, PartialEq)]
+#[derive(Clone, Show, PartialEq)]
 pub struct Geometry {
   /// A reference to the material to apply to this geometry.
   pub material_name: Option<String>,
@@ -49,7 +51,7 @@ pub struct Geometry {
 ///
 /// Convex polygons more complicated than a triangle are automatically
 /// converted into triangles.
-#[deriving(Clone, Copy, Show, Hash, PartialEq)]
+#[derive(Clone, Copy, Show, Hash, PartialEq)]
 pub enum Shape {
   /// A point specified by its position.
   Point(VTIndex),
@@ -61,7 +63,7 @@ pub enum Shape {
 
 /// A single 3-dimensional point on the corner of an object.
 #[allow(missing_docs)]
-#[deriving(Clone, Copy, Show)]
+#[derive(Clone, Copy, Show)]
 pub struct Vertex {
   pub x: f64,
   pub y: f64,
@@ -73,7 +75,7 @@ pub type Normal = Vertex;
 
 /// A single 2-dimensional point on a texture. "Texure Vertex".
 #[allow(missing_docs)]
-#[deriving(Clone, Copy, Show)]
+#[derive(Clone, Copy, Show)]
 pub struct TVertex {
   pub x: f64,
   pub y: f64,
