@@ -3,7 +3,6 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 #![allow(unstable)]
-#![feature(unboxed_closures)]
 
 pub use lex::ParseError;
 
