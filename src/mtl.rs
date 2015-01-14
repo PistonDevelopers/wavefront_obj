@@ -112,7 +112,7 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 }
 
 struct Parser<'a> {
-  line_number: uint,
+  line_number: usize,
   lexer: iter::Peekable<String, Lexer<'a>>,
 }
 
@@ -210,14 +210,14 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_uint(&mut self) -> Result<uint, ParseError> {
+  fn parse_usize(&mut self) -> Result<usize, ParseError> {
     match sliced(&self.next()) {
       None =>
-        return self.error("Expected uint but got end of input.".to_owned()),
+        return self.error("Expected usize but got end of input.".to_owned()),
       Some(s) => {
         match s.parse() {
           None =>
-            return self.error(format!("Expected uint but got {}.", s)),
+            return self.error(format!("Expected usize but got {}.", s)),
           Some(ret) =>
             Ok(ret)
         }
@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
 
   fn parse_illumination(&mut self) -> Result<Illumination, ParseError> {
     try!(self.parse_tag("illum"));
-    match try!(self.parse_uint()) {
+    match try!(self.parse_usize()) {
       0 => Ok(Illumination::Ambient),
       1 => Ok(Illumination::AmbientDiffuse),
       2 => Ok(Illumination::AmbientDiffuseSpecular),

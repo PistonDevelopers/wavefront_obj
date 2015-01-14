@@ -3,7 +3,6 @@
 name = "wavefront_obj"
 description = "A parser for the Wavefront .obj file format."
 license = "MIT"
-license-file = "LICENSE"
 repository = "https://github.com/PistonDevelopers/wavefront_obj"
 version = "0.0.1"
 authors = [

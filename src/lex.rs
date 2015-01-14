@@ -5,7 +5,7 @@ use std::str;
 #[derive(Show, PartialEq)]
 pub struct ParseError {
   /// The line of input the error is on.
-  pub line_number:   uint,
+  pub line_number:   usize,
   /// The error message.
   pub message:       String,
 }
@@ -17,7 +17,7 @@ fn is_whitespace(c: u8) -> bool {
 
 pub struct Lexer<'a> {
   bytes: iter::Peekable<u8, str::Bytes<'a>>,
-  current_line_number: uint,
+  current_line_number: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -52,7 +52,7 @@ impl<'a> Lexer<'a> {
   ///
   /// Postcondition: Either the end of the input was reached or
   /// `is_true` returns false for the currently peekable character.
-  fn skip_while(&mut self, is_true: |u8| -> bool) -> bool {
+  fn skip_while<F: Fn(u8) -> bool>(&mut self, is_true: F) -> bool {
     let mut was_anything_skipped = false;
 
     loop {
@@ -77,7 +77,7 @@ impl<'a> Lexer<'a> {
   ///
   /// Postcondition: Either the end of the input was reached or
   /// `is_false` returns true for the currently peekable character.
-  fn skip_unless(&mut self, is_false: |u8| -> bool) -> bool {
+  fn skip_unless<F: Fn(u8) -> bool>(&mut self, is_false: F) -> bool {
     self.skip_while(|c| !is_false(c))
   }
 
@@ -152,7 +152,7 @@ impl<'a> Iterator for Lexer<'a> {
     })
   }
 
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     (0, None)
   }
 }
