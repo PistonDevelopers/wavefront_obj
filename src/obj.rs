@@ -42,7 +42,7 @@ pub struct Geometry {
   /// A reference to the material to apply to this geometry.
   pub material_name: Option<String>,
   /// Should we use smooth shading when rendering this?
-  pub smooth_shading_group: uint,
+  pub smooth_shading_group: usize,
   /// The shapes of which this geometry is composed.
   pub shapes: Vec<Shape>,
 }
@@ -122,19 +122,19 @@ impl PartialOrd for TVertex {
 /// An index into the `vertices` array of an object, representing a vertex in
 /// the mesh. After parsing, this is guaranteed to be a valid index into the
 /// array, so unchecked indexing may be used.
-pub type VertexIndex = uint;
+pub type VertexIndex = usize;
 
 /// An index into the `texture vertex` array of an object.
 ///
 /// Unchecked indexing may be used, because the values are guaranteed to be in
 /// range by the parser.
-pub type TextureIndex = uint;
+pub type TextureIndex = usize;
 
 /// An index into the `normals` array of an object.
 ///
 /// Unchecked indexing may be used, because the values are guaranteed to be in
 /// range by the parser.
-pub type NormalIndex = uint;
+pub type NormalIndex = usize;
 
 /// An index into the vertex array, with an optional index into the texture
 /// array. This is used to define the corners of shapes which may or may not
@@ -247,7 +247,7 @@ fn test_to_triangles() {
 }
 
 struct Parser<'a> {
-  line_number: uint,
+  line_number: usize,
   lexer: iter::Peekable<String, Lexer<'a>>,
 }
 
@@ -455,29 +455,29 @@ impl<'a> Parser<'a> {
     self.parse_str()
   }
 
-  fn parse_smooth_shading(&mut self) -> Result<uint, ParseError> {
+  fn parse_smooth_shading(&mut self) -> Result<usize, ParseError> {
     try!(self.parse_tag("s"));
 
     match try!(self.parse_str()).as_slice() {
       "off" => Ok(0),
       s     => match s.parse() {
         Some(ret) => Ok(ret),
-        None => self.error(format!("Expected an unsigned int or `off` but got {}.", s)),
+        None => self.error(format!("Expected usize or `off` but got {}.", s)),
       }
     }
   }
 
-  fn parse_int_from(&mut self, s: &str) -> Result<int, ParseError> {
+  fn parse_isize_from(&mut self, s: &str) -> Result<isize, ParseError> {
     match s.parse() {
       None =>
-        return self.error(format!("Expected int but got {}.", s)),
+        return self.error(format!("Expected isize but got {}.", s)),
       Some(ret) =>
         Ok(ret)
     }
   }
 
-  fn parse_vtindex(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
-                  valid_nx: (uint, uint) ) -> Result<VTIndex, ParseError> {
+  fn parse_vtindex(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
+                  valid_nx: (usize, usize) ) -> Result<VTIndex, ParseError> {
     match sliced(&self.next()) {
       None =>
         return self.error("Expected vertex index but got end of input.".to_owned()),
@@ -487,28 +487,28 @@ impl<'a> Parser<'a> {
 
         match splits.len() {
           1 => {
-            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             Ok((v_idx, None, None))
           },
           2 => {
-            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            let t_idx = try!(self.parse_int_from(splits[1]));
+            let t_idx = try!(self.parse_isize_from(splits[1]));
             let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
             Ok((v_idx, Some(t_idx), None))
           },
           3 => {
-            let v_idx = try!(self.parse_int_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             let t_idx_opt = if splits[1].len() == 0 {
               None
             } else {
-              let t_idx = try!(self.parse_int_from(splits[1]));
+              let t_idx = try!(self.parse_isize_from(splits[1]));
               let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
               Some(t_idx)
             };
-            let n_idx = try!(self.parse_int_from(splits[2]));
+            let n_idx = try!(self.parse_isize_from(splits[2]));
             let n_idx = try!(self.check_valid_index(valid_nx, n_idx));
             Ok((v_idx, t_idx_opt, Some(n_idx)))
           },
@@ -520,26 +520,26 @@ impl<'a> Parser<'a> {
   }
 
   /// `valid_values` is a range of valid bounds for the actual value.
-  fn check_valid_index(&self, valid_values: (uint, uint), actual_value: int) -> Result<uint, ParseError> {
+  fn check_valid_index(&self, valid_values: (usize, usize), actual_value: isize) -> Result<usize, ParseError> {
     let (min, max) = valid_values;
 
     let mut x = actual_value;
 
     // Handle negative vertex indexes.
     if x < 0 {
-      x = max as int - x;
+      x = max as isize - x;
     }
 
-    if x >= min as int && x < max as int {
+    if x >= min as isize && x < max as isize {
       assert!(x > 0);
-      Ok((x - min as int) as uint)
+      Ok((x - min as isize) as usize)
     } else {
       self.error(format!("Expected index in the range [{}, {}), but got {}.", min, max, actual_value))
     }
   }
 
-  fn parse_face(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
-               valid_nx: (uint, uint)) -> Result<Vec<Shape>, ParseError> {
+  fn parse_face(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
+               valid_nx: (usize, usize)) -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
@@ -562,8 +562,8 @@ impl<'a> Parser<'a> {
     Ok(to_triangles(corner_list.as_slice()))
   }
 
-  fn parse_geometries(&mut self, valid_vtx: (uint, uint), valid_tx: (uint, uint),
-                     valid_nx: (uint, uint)) -> Result<Vec<Geometry>, ParseError> {
+  fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
+                     valid_nx: (usize, usize)) -> Result<Vec<Geometry>, ParseError> {
     let mut result = Vec::new();
     let mut shapes = Vec::new();
 
@@ -616,12 +616,12 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_object(&mut self,
-      min_vertex_index: &mut uint,
-      max_vertex_index: &mut uint,
-      min_tex_index:    &mut uint,
-      max_tex_index:    &mut uint,
-      min_normal_index: &mut uint,
-      max_normal_index: &mut uint
+      min_vertex_index: &mut usize,
+      max_vertex_index: &mut usize,
+      min_tex_index:    &mut usize,
+      max_tex_index:    &mut usize,
+      min_normal_index: &mut usize,
+      max_normal_index: &mut usize
       ) -> Result<Object, ParseError> {
     let name = try!(self.parse_object_name());
     try!(self.one_or_more_newlines());
