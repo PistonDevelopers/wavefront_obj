@@ -162,9 +162,9 @@ fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
 
   let last_elem = *xs.last().unwrap();
 
-  xs.slice_to(xs.len()-1)
+  xs[..xs.len()-1]
     .iter()
-    .zip(xs.slice(1, xs.len()-1).iter())
+    .zip(xs[1..xs.len()-1].iter())
     .map(|(&x, &y)| Shape::Triangle(last_elem, x, y))
     .collect()
 }
