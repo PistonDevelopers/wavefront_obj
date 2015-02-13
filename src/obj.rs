@@ -9,7 +9,7 @@ use std::borrow::ToOwned;
 use lex::{ParseError,Lexer};
 
 /// A set of objects, as listed in an `.obj` file.
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ObjSet {
   /// Which material library to use.
   pub material_library: String,
@@ -18,7 +18,7 @@ pub struct ObjSet {
 }
 
 /// A mesh object.
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Object {
   /// A human-readable name for this object. This can be set in blender.
   pub name: String,
@@ -37,7 +37,7 @@ pub struct Object {
 }
 
 /// A set of shapes, all using the given material.
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Geometry {
   /// A reference to the material to apply to this geometry.
   pub material_name: Option<String>,
@@ -51,7 +51,7 @@ pub struct Geometry {
 ///
 /// Convex polygons more complicated than a triangle are automatically
 /// converted into triangles.
-#[derive(Clone, Copy, Show, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub enum Shape {
   /// A point specified by its position.
   Point(VTIndex),
@@ -63,7 +63,7 @@ pub enum Shape {
 
 /// A single 3-dimensional point on the corner of an object.
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Show)]
+#[derive(Clone, Copy, Debug)]
 pub struct Vertex {
   pub x: f64,
   pub y: f64,
@@ -75,7 +75,7 @@ pub type Normal = Vertex;
 
 /// A single 2-dimensional point on a texture. "Texure Vertex".
 #[allow(missing_docs)]
-#[derive(Clone, Copy, Show)]
+#[derive(Clone, Copy, Debug)]
 pub struct TVertex {
   pub x: f64,
   pub y: f64,
@@ -248,7 +248,7 @@ fn test_to_triangles() {
 
 struct Parser<'a> {
   line_number: usize,
-  lexer: iter::Peekable<String, Lexer<'a>>,
+  lexer: iter::Peekable<Lexer<'a>>,
 }
 
 impl<'a> Parser<'a> {
@@ -357,9 +357,9 @@ impl<'a> Parser<'a> {
     let s = try!(self.parse_str());
 
     match s.as_slice().parse() {
-      None =>
+      Err(_err) =>
         self.error(format!("Expected f64 but got {}.", s)),
-      Some(ret) =>
+      Ok(ret) =>
         Ok(ret)
     }
   }
@@ -461,17 +461,17 @@ impl<'a> Parser<'a> {
     match try!(self.parse_str()).as_slice() {
       "off" => Ok(0),
       s     => match s.parse() {
-        Some(ret) => Ok(ret),
-        None => self.error(format!("Expected usize or `off` but got {}.", s)),
+        Ok(ret) => Ok(ret),
+        Err(_err) => self.error(format!("Expected usize or `off` but got {}.", s)),
       }
     }
   }
 
   fn parse_isize_from(&mut self, s: &str) -> Result<isize, ParseError> {
     match s.parse() {
-      None =>
+      Err(_err) =>
         return self.error(format!("Expected isize but got {}.", s)),
-      Some(ret) =>
+      Ok(ret) =>
         Ok(ret)
     }
   }
@@ -559,7 +559,7 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Ok(to_triangles(corner_list.as_slice()))
+    Ok(to_triangles(&corner_list[]))
   }
 
   fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
@@ -597,8 +597,8 @@ impl<'a> Parser<'a> {
           })
         },
         Some("f") | Some("l") => {
-          shapes.push_all(try!(self.parse_face(valid_vtx, valid_tx,
-                                               valid_nx)).as_slice());
+          shapes.push_all(&try!(self.parse_face(valid_vtx, valid_tx,
+                                               valid_nx))[]);
         },
         _ => break,
       }
@@ -1553,5 +1553,5 @@ pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
   // way I could find to allow non-trailing newlines.
   input.push_str("\n");
-  Parser::new(input.as_slice()).parse_objset()
+  Parser::new(&input[]).parse_objset()
 }

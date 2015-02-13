@@ -10,7 +10,7 @@ pub use lex::ParseError;
 use lex::Lexer;
 
 /// A set of materials in one `.mtl` file.
-#[derive(Clone, Show, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 #[allow(missing_docs)]
 pub struct MtlSet {
   pub materials: Vec<Material>,
@@ -18,7 +18,7 @@ pub struct MtlSet {
 
 /// A single material that can be applied to any face. They are generally
 /// applied by using the Phong shading model.
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 #[allow(missing_docs)]
 pub struct Material {
   pub name: String,
@@ -33,7 +33,7 @@ pub struct Material {
 }
 
 /// How a given material is supposed to be illuminated.
-#[derive(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 #[allow(missing_docs)]
 pub enum Illumination {
   Ambient,
@@ -41,7 +41,7 @@ pub enum Illumination {
   AmbientDiffuseSpecular,
 }
 
-#[derive(Clone, Copy, Show)]
+#[derive(Clone, Copy, Debug)]
 #[allow(missing_docs)]
 pub struct Color {
   pub r: f64,
@@ -113,7 +113,7 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 
 struct Parser<'a> {
   line_number: usize,
-  lexer: iter::Peekable<String, Lexer<'a>>,
+  lexer: iter::Peekable<Lexer<'a>>,
 }
 
 impl<'a> Parser<'a> {
@@ -201,9 +201,9 @@ impl<'a> Parser<'a> {
         return self.error("Expected f64 but got end of input.".to_owned()),
       Some(s) => {
         match s.parse() {
-          None =>
+          Err(_err) =>
             return self.error(format!("Expected f64 but got {}.", s)),
-          Some(ret) =>
+          Ok(ret) =>
             Ok(ret)
         }
       }
@@ -216,9 +216,9 @@ impl<'a> Parser<'a> {
         return self.error("Expected usize but got end of input.".to_owned()),
       Some(s) => {
         match s.parse() {
-          None =>
+          Err(_err) =>
             return self.error(format!("Expected usize but got {}.", s)),
-          Some(ret) =>
+          Ok(ret) =>
             Ok(ret)
         }
       }

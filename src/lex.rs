@@ -2,7 +2,7 @@ use std::iter;
 use std::str;
 
 /// A parsing error, with location information.
-#[derive(Show, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ParseError {
   /// The line of input the error is on.
   pub line_number:   usize,
@@ -16,7 +16,7 @@ fn is_whitespace(c: u8) -> bool {
 }
 
 pub struct Lexer<'a> {
-  bytes: iter::Peekable<u8, str::Bytes<'a>>,
+  bytes: iter::Peekable<str::Bytes<'a>>,
   current_line_number: usize,
 }
 

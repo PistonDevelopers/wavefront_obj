@@ -2,7 +2,7 @@
 #![crate_type = "lib"]
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![allow(unstable)]
+#![feature(collections, core, hash)]
 
 pub use lex::ParseError;
 
