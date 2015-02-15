@@ -7,6 +7,7 @@
 pub use lex::ParseError;
 
 mod lex;
+mod util;
 
 pub mod mtl;
 pub mod obj;

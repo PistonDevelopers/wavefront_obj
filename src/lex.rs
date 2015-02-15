@@ -31,19 +31,16 @@ impl<'a> Lexer<'a> {
   /// Advance the lexer by one character.
   fn advance(&mut self) {
     match self.bytes.next() {
-      None => {},
-      Some(c) => {
-        if c == b'\n' {
-          self.current_line_number += 1;
-        }
+      Some(c) if c == b'\n' => {
+        self.current_line_number += 1;
       }
+      _ => {},
     }
   }
 
   /// Looks at the next character the lexer is pointing to.
   fn peek(&mut self) -> Option<u8> {
-    fn deref_u8(x: &u8) -> u8 { *x }
-    self.bytes.peek().map(deref_u8)
+    self.bytes.peek().map(|&x| x)
   }
 
   /// Advance past characters until the given condition is true.
@@ -58,12 +55,12 @@ impl<'a> Lexer<'a> {
     loop {
       match self.peek() {
         None => break,
-        Some(c) => {
-          if !is_true(c) { break }
+        Some(c) if !is_true(c) => break,
+        _ => {
+          self.advance();
+          was_anything_skipped = true;
         }
       }
-      self.advance();
-      was_anything_skipped = true;
     }
 
     debug_assert!(self.peek().map(|c| !is_true(c)).unwrap_or(true));

@@ -8,6 +8,7 @@ use std::borrow::ToOwned;
 
 pub use lex::ParseError;
 use lex::Lexer;
+use util::OrderingExt;
 
 /// A set of materials in one `.mtl` file.
 #[derive(Clone, Debug, PartialEq)]
@@ -77,8 +78,8 @@ impl PartialEq for Color {
 impl PartialOrd for Color {
   fn partial_cmp(&self, other: &Color) -> Option<Ordering> {
     Some(fuzzy_cmp(self.r, other.r, 0.00001)
-      .cmp(&fuzzy_cmp(self.g, other.g, 0.00001))
-      .cmp(&fuzzy_cmp(self.b, other.b, 0.00001)))
+      .lexico(|| fuzzy_cmp(self.g, other.g, 0.00001))
+      .lexico(|| fuzzy_cmp(self.b, other.b, 0.00001)))
   }
 }
 
@@ -91,14 +92,14 @@ impl PartialEq for Material {
 impl PartialOrd for Material {
   fn partial_cmp(&self, other: &Material) -> Option<Ordering> {
     Some(self.name.cmp(&other.name)
-      .cmp(&fuzzy_cmp(self.specular_coefficient, other.specular_coefficient, 0.00001))
-      .cmp(&self.color_ambient.partial_cmp(&other.color_ambient).unwrap())
-      .cmp(&self.color_diffuse.partial_cmp(&other.color_diffuse).unwrap())
-      .cmp(&self.color_specular.partial_cmp(&other.color_specular).unwrap())
-      .cmp(&fuzzy_opt_cmp(self.optical_density, other.optical_density, 0.00001))
-      .cmp(&fuzzy_cmp(self.alpha, other.alpha, 0.00001))
-      .cmp(&self.illumination.cmp(&other.illumination))
-      .cmp(&self.uv_map.cmp(&other.uv_map)))
+      .lexico(|| fuzzy_cmp(self.specular_coefficient, other.specular_coefficient, 0.00001))
+      .lexico(|| self.color_ambient.partial_cmp(&other.color_ambient).unwrap())
+      .lexico(|| self.color_diffuse.partial_cmp(&other.color_diffuse).unwrap())
+      .lexico(|| self.color_specular.partial_cmp(&other.color_specular).unwrap())
+      .lexico(|| fuzzy_opt_cmp(self.optical_density, other.optical_density, 0.00001))
+      .lexico(|| fuzzy_cmp(self.alpha, other.alpha, 0.00001))
+      .lexico(|| self.illumination.cmp(&other.illumination))
+      .lexico(|| self.uv_map.cmp(&other.uv_map)))
   }
 }
 

@@ -7,6 +7,7 @@ use std::num::Float;
 use std::borrow::ToOwned;
 
 use lex::{ParseError,Lexer};
+use util::OrderingExt;
 
 /// A set of objects, as listed in an `.obj` file.
 #[derive(Clone, Debug, PartialEq)]
@@ -101,8 +102,8 @@ impl PartialEq for Vertex {
 impl PartialOrd for Vertex {
   fn partial_cmp(&self, other: &Vertex) -> Option<Ordering> {
     Some(fuzzy_cmp(self.x, other.x, 0.00001)
-      .cmp(&fuzzy_cmp(self.y, other.y, 0.00001))
-      .cmp(&fuzzy_cmp(self.z, other.z, 0.00001)))
+      .lexico(|| fuzzy_cmp(self.y, other.y, 0.00001))
+      .lexico(|| fuzzy_cmp(self.z, other.z, 0.00001)))
   }
 }
 
@@ -115,7 +116,7 @@ impl PartialEq for TVertex {
 impl PartialOrd for TVertex {
   fn partial_cmp(&self, other: &TVertex) -> Option<Ordering> {
     Some(fuzzy_cmp(self.x, other.x, 0.00001)
-      .cmp(&fuzzy_cmp(self.y, other.y, 0.00001)))
+      .lexico(|| fuzzy_cmp(self.y, other.y, 0.00001)))
   }
 }
 
