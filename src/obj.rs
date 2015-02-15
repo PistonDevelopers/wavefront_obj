@@ -26,10 +26,10 @@ pub struct Object {
   /// by index in `faces`.
   pub vertices: Vec<Vertex>,
   /// The set of texture vertices referenced by this object. The actual
-  /// vertices are indexed by the second element in a `VTIndex`.
+  /// vertices are indexed by the second element in a `VTNIndex`.
   pub tex_vertices: Vec<TVertex>,
   /// The set of normals referenced by this object. This are are referenced
-  /// by the third element in a `VTIndex`.
+  /// by the third element in a `VTNIndex`.
   pub normals: Vec<Normal>,
   /// A set of shapes (with materials applied to them) of which this object is
   /// composed.
@@ -54,11 +54,11 @@ pub struct Geometry {
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
 pub enum Shape {
   /// A point specified by its position.
-  Point(VTIndex),
+  Point(VTNIndex),
   /// A line specified by its endpoints.
-  Line(VTIndex, VTIndex),
+  Line(VTNIndex, VTNIndex),
   /// A triangle specified by its three vertices.
-  Triangle(VTIndex, VTIndex, VTIndex),
+  Triangle(VTNIndex, VTNIndex, VTNIndex),
 }
 
 /// A single 3-dimensional point on the corner of an object.
@@ -139,7 +139,7 @@ pub type NormalIndex = usize;
 /// An index into the vertex array, with an optional index into the texture
 /// array. This is used to define the corners of shapes which may or may not
 /// be textured.
-pub type VTIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
+pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
@@ -152,7 +152,7 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 /// Blender exports shapes as a list of the vertices representing their corners.
 /// This function turns that into a set of OpenGL-usable shapes - i.e. points,
 /// lines, or triangles.
-fn to_triangles(xs: &[VTIndex]) -> Vec<Shape> {
+fn to_triangles(xs: &[VTNIndex]) -> Vec<Shape> {
   match xs.len() {
     0 => return vec!(),
     1 => return vec!(Shape::Point(xs[0])),
@@ -477,7 +477,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_vtindex(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-                  valid_nx: (usize, usize) ) -> Result<VTIndex, ParseError> {
+                  valid_nx: (usize, usize) ) -> Result<VTNIndex, ParseError> {
     match sliced(&self.next()) {
       None =>
         return self.error("Expected vertex index but got end of input.".to_owned()),
