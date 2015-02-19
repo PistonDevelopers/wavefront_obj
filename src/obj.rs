@@ -13,7 +13,7 @@ use util::OrderingExt;
 #[derive(Clone, Debug, PartialEq)]
 pub struct ObjSet {
   /// Which material library to use.
-  pub material_library: String,
+  pub material_library: Option<String>,
   /// The set of objects.
   pub objects: Vec<Object>,
 }
@@ -277,7 +277,7 @@ impl<'a> Parser<'a> {
     match ret {
       None => {},
       Some(ref s) =>
-        if s.as_slice() == "\n" {
+        if *s == "\n" {
           self.line_number += 1;
         },
     }
@@ -342,9 +342,14 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_material_library(&mut self) -> Result<String, ParseError> {
-    try!(self.parse_tag("mtllib"));
-    self.parse_str()
+  fn parse_material_library(&mut self) -> Result<Option<String>, ParseError> {
+    match sliced(&self.peek()) {
+      None => return Ok(None),
+      Some("mtllib") => {},
+      Some(_) => return Ok(None),
+    }
+    self.advance();
+    self.parse_str().map(Some)
   }
 
   fn parse_object_name(&mut self) -> Result<String, ParseError> {
@@ -684,8 +689,12 @@ impl<'a> Parser<'a> {
     self.zero_or_more_newlines();
 
     let material_library = try!(self.parse_material_library());
-    try!(self.one_or_more_newlines());
-    let objects          = try!(self.parse_objects());
+
+    if material_library.is_some() {
+      try!(self.one_or_more_newlines());
+    }
+
+    let objects = try!(self.parse_objects());
 
     self.zero_or_more_newlines();
 
@@ -815,7 +824,7 @@ f 45 41 44 48
 
   let expected =
      Ok(ObjSet {
-      material_library: "untitled.mtl".to_owned(),
+      material_library: Some("untitled.mtl".to_owned()),
       objects: vec!(
         Object {
           name: "Cube.001".to_owned(),
@@ -1016,7 +1025,7 @@ f 5/5 1/13 4/14 8/6
 
   let expected =
     Ok(ObjSet {
-      material_library: "cube.mtl".to_owned(),
+      material_library: Some("cube.mtl".to_owned()),
       objects: vec![
         Object {
           name: "Cube".to_owned(),
@@ -1188,7 +1197,7 @@ f 3//32 2//32 4//32
 
   let expected =
     Ok(ObjSet {
-      material_library: "normal-cone.mtl".to_owned(),
+      material_library: Some("normal-cone.mtl".to_owned()),
       objects: vec![
       Object {
         name: "Cone".to_owned(),
@@ -1422,7 +1431,7 @@ f 21 33 12
 
   let expected =
     Ok(ObjSet {
-      material_library: "dome.mtl".to_owned(),
+      material_library: Some("dome.mtl".to_owned()),
       objects: vec![
         Object {
           name: "Dome".to_owned(),
@@ -1544,6 +1553,106 @@ f 21 33 12
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
+
+#[test]
+fn no_mtls() {
+  use self::Shape::{ Triangle };
+
+  let test_case =
+r#"
+# Blender v2.71 (sub 0) OBJ File: 'cube.blend'
+# www.blender.org
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952 0.498633
+vt 0.754996 0.498236
+vt 0.755393 0.248279
+vt 1.005349 0.248677
+vt 0.255083 0.497442
+vt 0.255480 0.247485
+vt 0.505437 0.247882
+vt 0.505039 0.497839
+vt 0.754598 0.748193
+vt 0.504642 0.747795
+vt 0.505834 -0.002074
+vt 0.755790 -0.001677
+vt 0.005127 0.497044
+vt 0.005524 0.247088
+s off
+f 1/1 2/2 3/3 4/4
+f 5/5 8/6 7/7 6/8
+f 1/9 5/10 6/8 2/2
+f 2/2 6/8 7/7 3/3
+f 3/3 7/7 8/11 4/12
+f 5/5 1/13 4/14 8/6
+"#;
+
+  let expected =
+    Ok(ObjSet {
+      material_library: None,
+      objects: vec![
+        Object {
+          name: "Cube".to_owned(),
+          vertices: vec![
+            Vertex { x:  1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z: -1.0 }
+          ],
+          tex_vertices: vec![
+            TVertex { x: 1.004952, y: 0.498633 },
+            TVertex { x: 0.754996, y: 0.498236 },
+            TVertex { x: 0.755393, y: 0.248279 },
+            TVertex { x: 1.005349, y: 0.248677 },
+            TVertex { x: 0.255083, y: 0.497442 },
+            TVertex { x: 0.25548, y: 0.247485 },
+            TVertex { x: 0.505437, y: 0.247882 },
+            TVertex { x: 0.505039, y: 0.497839 },
+            TVertex { x: 0.754598, y: 0.748193 },
+            TVertex { x: 0.504642, y: 0.747795 },
+            TVertex { x: 0.505834, y: -0.002074 },
+            TVertex { x: 0.75579, y: -0.001677 },
+            TVertex { x: 0.005127, y: 0.497044 },
+            TVertex { x: 0.005524, y: 0.247088 }
+          ],
+          normals : vec![],
+          geometry: vec![
+            Geometry {
+              material_name: None,
+              smooth_shading_group: 0,
+              shapes: vec![
+                Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
+                Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)),
+                Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)),
+                Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)),
+                Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)),
+                Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)),
+                Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)),
+                Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)),
+                Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)),
+                Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)),
+                Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)),
+                Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None))
+              ]
+            }
+          ]
+        }
+      ]
+    });
+
+  assert_eq!(parse(test_case.to_owned()), expected);
+}
 
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
 /// file, or an error. Support in this parser for the full file format is
