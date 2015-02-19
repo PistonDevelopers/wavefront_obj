@@ -144,10 +144,7 @@ pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
-  match *s {
-    None => None,
-    Some(ref s) => Some(s.as_slice()),
-  }
+  s.as_ref().map(|s| &s[])
 }
 
 /// Blender exports shapes as a list of the vertices representing their corners.
@@ -344,9 +341,8 @@ impl<'a> Parser<'a> {
 
   fn parse_material_library(&mut self) -> Result<Option<String>, ParseError> {
     match sliced(&self.peek()) {
-      None => return Ok(None),
       Some("mtllib") => {},
-      Some(_) => return Ok(None),
+      _ => return Ok(None),
     }
     self.advance();
     self.parse_str().map(Some)
@@ -362,7 +358,7 @@ impl<'a> Parser<'a> {
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = try!(self.parse_str());
 
-    match s.as_slice().parse() {
+    match s.parse() {
       Err(_err) =>
         self.error(format!("Expected f64 but got {}.", s)),
       Ok(ret) =>
