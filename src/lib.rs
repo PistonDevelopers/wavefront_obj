@@ -3,7 +3,6 @@
 #![deny(unsafe_blocks)]
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(collections, core, hash)]
 
 pub use lex::ParseError;
 

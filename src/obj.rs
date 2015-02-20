@@ -146,7 +146,7 @@ pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
   match *s {
     None => None,
-    Some(ref s) => Some(s.as_slice()),
+    Some(ref s) => Some(&s[..]),
   }
 }
 
@@ -333,7 +333,7 @@ impl<'a> Parser<'a> {
       None =>
         self.error(format!("Expected string but got end of input.")),
       Some(got) => {
-        if got.as_slice() == "\n" {
+        if got == "\n" {
           self.error(format!("Expected string but got `end of line`."))
         } else {
           Ok(got)
@@ -362,7 +362,7 @@ impl<'a> Parser<'a> {
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = try!(self.parse_str());
 
-    match s.as_slice().parse() {
+    match s.parse() {
       Err(_err) =>
         self.error(format!("Expected f64 but got {}.", s)),
       Ok(ret) =>
@@ -464,7 +464,7 @@ impl<'a> Parser<'a> {
   fn parse_smooth_shading(&mut self) -> Result<usize, ParseError> {
     try!(self.parse_tag("s"));
 
-    match try!(self.parse_str()).as_slice() {
+    match &try!(self.parse_str())[..] {
       "off" => Ok(0),
       s     => match s.parse() {
         Ok(ret) => Ok(ret),
@@ -565,7 +565,7 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Ok(to_triangles(&corner_list[]))
+    Ok(to_triangles(&corner_list[..]))
   }
 
   fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
@@ -603,8 +603,10 @@ impl<'a> Parser<'a> {
           })
         },
         Some("f") | Some("l") => {
-          shapes.push_all(&try!(self.parse_face(valid_vtx, valid_tx,
-                                               valid_nx))[]);
+          shapes.extend(
+            try!(self.parse_face(
+              valid_vtx, valid_tx, valid_nx))
+            .into_iter());
         },
         _ => break,
       }
@@ -1663,5 +1665,5 @@ pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
   // way I could find to allow non-trailing newlines.
   input.push_str("\n");
-  Parser::new(&input[]).parse_objset()
+  Parser::new(&input[..]).parse_objset()
 }
