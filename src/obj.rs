@@ -144,10 +144,7 @@ pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
-  match *s {
-    None => None,
-    Some(ref s) => Some(&s[..]),
-  }
+  s.as_ref().map(|s| &s[..])
 }
 
 /// Blender exports shapes as a list of the vertices representing their corners.
@@ -344,9 +341,8 @@ impl<'a> Parser<'a> {
 
   fn parse_material_library(&mut self) -> Result<Option<String>, ParseError> {
     match sliced(&self.peek()) {
-      None => return Ok(None),
       Some("mtllib") => {},
-      Some(_) => return Ok(None),
+      _ => return Ok(None),
     }
     self.advance();
     self.parse_str().map(Some)
@@ -565,7 +561,7 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Ok(to_triangles(&corner_list[..]))
+    Ok(to_triangles(&corner_list))
   }
 
   fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
@@ -1665,5 +1661,5 @@ pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
   // way I could find to allow non-trailing newlines.
   input.push_str("\n");
-  Parser::new(&input[..]).parse_objset()
+  Parser::new(&input).parse_objset()
 }
