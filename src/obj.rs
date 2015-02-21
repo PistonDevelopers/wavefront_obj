@@ -144,7 +144,7 @@ pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
 /// Slices the underlying string in an option.
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
-  s.as_ref().map(|s| &s[])
+  s.as_ref().map(|s| &s[..])
 }
 
 /// Blender exports shapes as a list of the vertices representing their corners.
@@ -561,7 +561,7 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Ok(to_triangles(&corner_list[]))
+    Ok(to_triangles(&corner_list))
   }
 
   fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
@@ -600,7 +600,7 @@ impl<'a> Parser<'a> {
         },
         Some("f") | Some("l") => {
           shapes.push_all(&try!(self.parse_face(valid_vtx, valid_tx,
-                                               valid_nx))[]);
+                                               valid_nx)));
         },
         _ => break,
       }
@@ -1659,5 +1659,5 @@ pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
   // Unfortunately, the parser requires a trailing newline. This is the easiest
   // way I could find to allow non-trailing newlines.
   input.push_str("\n");
-  Parser::new(&input[]).parse_objset()
+  Parser::new(&input).parse_objset()
 }
