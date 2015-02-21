@@ -108,7 +108,7 @@ impl PartialOrd for Material {
 fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
   match *s {
     None => None,
-    Some(ref s) => Some(s.as_slice()),
+    Some(ref s) => Some(&s[..]),
   }
 }
 
@@ -142,7 +142,7 @@ impl<'a> Parser<'a> {
     match ret {
       None => {},
       Some(ref s) =>
-        if s.as_slice() == "\n" {
+        if *s == "\n" {
           self.line_number += 1;
         },
     }
@@ -375,7 +375,7 @@ impl<'a> Parser<'a> {
 /// category.
 pub fn parse(mut input: String) -> Result<MtlSet, ParseError> {
   input.push_str("\n");
-  Parser::new(input.as_slice()).parse_mtlset()
+  Parser::new(&input[..]).parse_mtlset()
 }
 
 #[test]

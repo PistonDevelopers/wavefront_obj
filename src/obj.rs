@@ -330,7 +330,7 @@ impl<'a> Parser<'a> {
       None =>
         self.error(format!("Expected string but got end of input.")),
       Some(got) => {
-        if got.as_slice() == "\n" {
+        if got == "\n" {
           self.error(format!("Expected string but got `end of line`."))
         } else {
           Ok(got)
@@ -460,7 +460,7 @@ impl<'a> Parser<'a> {
   fn parse_smooth_shading(&mut self) -> Result<usize, ParseError> {
     try!(self.parse_tag("s"));
 
-    match try!(self.parse_str()).as_slice() {
+    match &try!(self.parse_str())[..] {
       "off" => Ok(0),
       s     => match s.parse() {
         Ok(ret) => Ok(ret),
@@ -599,8 +599,10 @@ impl<'a> Parser<'a> {
           })
         },
         Some("f") | Some("l") => {
-          shapes.push_all(&try!(self.parse_face(valid_vtx, valid_tx,
-                                               valid_nx)));
+          shapes.extend(
+            try!(self.parse_face(
+              valid_vtx, valid_tx, valid_nx))
+            .into_iter());
         },
         _ => break,
       }
