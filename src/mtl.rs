@@ -3,7 +3,6 @@
 use std::cmp::Ordering;
 use std::cmp::Ordering::{Equal, Less, Greater};
 use std::iter;
-use std::num::Float;
 use std::borrow::ToOwned;
 
 pub use lex::ParseError;
