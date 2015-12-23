@@ -23,7 +23,7 @@ pub struct Object {
   /// A human-readable name for this object. This can be set in blender.
   pub name: String,
   /// The set of vertices this object is composed of. These are referenced
-  /// by index in `faces`.
+  /// by index in `shapes` contained within each element of `geometry`.
   pub vertices: Vec<Vertex>,
   /// The set of texture vertices referenced by this object. The actual
   /// vertices are indexed by the second element in a `VTNIndex`.
