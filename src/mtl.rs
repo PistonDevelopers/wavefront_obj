@@ -26,6 +26,7 @@ pub struct Material {
   pub color_ambient:  Color,
   pub color_diffuse:  Color,
   pub color_specular: Color,
+  pub color_emissive: Option<Color>,
   pub optical_density: Option<f64>,
   pub alpha: f64,
   pub illumination: Illumination,
@@ -266,6 +267,14 @@ impl<'a> Parser<'a> {
     self.parse_color()
   }
 
+  fn parse_emissive_color(&mut self) -> Result<Option<Color>, ParseError> {
+    if sliced(&self.peek()) != Some("Ke") {
+      return Ok(None);
+    }
+    try!(self.parse_tag("Ke"));
+    self.parse_color().map(|c| Some(c))
+  }
+
   fn parse_optical_density(&mut self) -> Result<Option<f64>, ParseError> {
     match sliced(&self.peek()) {
       Some("Ni") => {},
@@ -318,6 +327,8 @@ impl<'a> Parser<'a> {
     try!(self.one_or_more_newlines());
     let spec = try!(self.parse_specular_color());
     try!(self.one_or_more_newlines());
+    let emit = try!(self.parse_emissive_color());
+    if emit.is_some() { try!(self.one_or_more_newlines()); }
     let optical_density = try!(self.parse_optical_density());
     if optical_density.is_some() { try!(self.one_or_more_newlines()); }
     let dissolve = try!(self.parse_dissolve());
@@ -333,6 +344,7 @@ impl<'a> Parser<'a> {
       color_ambient:  amb,
       color_diffuse:  diff,
       color_specular: spec,
+      color_emissive: emit,
       optical_density: optical_density,
       alpha: dissolve,
       illumination: illum,
@@ -396,6 +408,8 @@ Ka 0.000000 0.000000 0.000000
 Kd 0.640000 0.640000 0.640000
 # dissolve factor (weighted)
 Ks 0.500000 0.500000 0.500000
+# emissive color (weighted)
+Ke 0.100000 0.100000 0.100000
 # optical density (refraction)
 Ni 1.000000
 # alpha
@@ -425,6 +439,7 @@ illum 2
           color_ambient:  Color { r: 0.0,  g: 0.0,  b: 0.0  },
           color_diffuse:  Color { r: 0.64, g: 0.64, b: 0.64 },
           color_specular: Color { r: 0.5,  g: 0.5,  b: 0.5  },
+          color_emissive: Some(Color { r: 0.1,  g: 0.1,  b: 0.1  }),
           optical_density: Some(1.0),
           alpha: 1.0,
           illumination: AmbientDiffuseSpecular,
@@ -436,6 +451,7 @@ illum 2
           color_ambient:  Color { r: 0.0, g: 0.0, b: 0.0 },
           color_diffuse:  Color { r: 0.8, g: 0.8, b: 0.8 },
           color_specular: Color { r: 0.8, g: 0.8, b: 0.8 },
+          color_emissive: None,
           optical_density: None,
           alpha: 1.0,
           illumination: AmbientDiffuseSpecular,
@@ -461,6 +477,7 @@ Ns 96.078431
 Ka 0.000000 0.000000 0.000000
 Kd 0.640000 0.640000 0.640000
 Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
@@ -476,6 +493,7 @@ map_Kd cube-uv-num.png
           color_ambient:  Color { r: 0.0,  g: 0.0,  b: 0.0  },
           color_diffuse:  Color { r: 0.64, g: 0.64, b: 0.64 },
           color_specular: Color { r: 0.5,  g: 0.5,  b: 0.5  },
+          color_emissive: Some(Color { r: 0.0,  g: 0.0,  b: 0.0  }),
           optical_density: Some(1.0),
           alpha: 1.0,
           illumination: AmbientDiffuseSpecular,
