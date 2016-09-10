@@ -49,18 +49,19 @@ pub struct Geometry {
 
 /// A shape gathers a primitive and groups.
 ///
-/// Each shape is associated with 0 or many groups. Those are text identifiers used to gather
-/// geometry elements into different groups.
+/// Each shape is associated with 0 or many groups. Those are text identifiers
+/// used to gather geometry elements into different groups.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
   /// The primitive of the shape.
   pub primitive: Primitive,
-  /// Associated groups. No associated group means the shape uses the default group.
+  /// Associated groups. No associated group means the shape uses the default
+  /// group.
   pub groups: Vec<GroupName>
 }
 
 /// Name of a group.
-type GroupName = String;
+pub type GroupName = String;
 
 /// The various primitives supported by this library.
 ///
@@ -536,7 +537,8 @@ impl<'a> Parser<'a> {
   }
 
   /// `valid_values` is a range of valid bounds for the actual value.
-  fn check_valid_index(&self, valid_values: (usize, usize), actual_value: isize) -> Result<usize, ParseError> {
+  fn check_valid_index(&self, valid_values: (usize, usize), actual_value: isize)
+      -> Result<usize, ParseError> {
     let (min, max) = valid_values;
 
     let mut x = actual_value;
@@ -554,8 +556,10 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_face(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-               valid_nx: (usize, usize), current_groups: &Vec<GroupName>) -> Result<Vec<Shape>, ParseError> {
+  fn parse_face(
+      &mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
+      valid_nx: (usize, usize), current_groups: &Vec<GroupName>)
+      -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
@@ -581,8 +585,10 @@ impl<'a> Parser<'a> {
     }).collect())
   }
 
-  fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-                     valid_nx: (usize, usize)) -> Result<Vec<Geometry>, ParseError> {
+  fn parse_geometries(
+      &mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
+      valid_nx: (usize, usize))
+      -> Result<Vec<Geometry>, ParseError> {
     let mut result = Vec::new();
     let mut shapes = Vec::new();
 
