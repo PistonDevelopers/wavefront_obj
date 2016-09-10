@@ -57,6 +57,16 @@ pub struct Shape {
   groups: Vec<GroupName>
 }
 
+impl Shape {
+  #[allow(dead_code)] // used only in tests
+  fn new(primitive: Primitive, groups: Vec<GroupName>) -> Self {
+    Shape {
+      primitive: primitive,
+      groups: groups
+    }
+  }
+}
+
 /// Name of a group.
 type GroupName = String;
 
@@ -753,7 +763,7 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_parse() {
-  use self::Shape::{ Line, Triangle };
+  use self::Primitive::{ Line, Triangle };
 
   let test_case =
 r#"
@@ -884,18 +894,18 @@ f 45 41 44 48
               material_name: Some("None".to_owned()),
               smooth_shading_group: 0,
               shapes: vec!(
-                Triangle((0, None, None), (4, None, None), (5, None, None)),
-                Triangle((0, None, None), (5, None, None), (1, None, None)),
-                Triangle((1, None, None), (5, None, None), (6, None, None)),
-                Triangle((1, None, None), (6, None, None), (2, None, None)),
-                Triangle((2, None, None), (6, None, None), (7, None, None)),
-                Triangle((2, None, None), (7, None, None), (3, None, None)),
-                Triangle((3, None, None), (7, None, None), (4, None, None)),
-                Triangle((3, None, None), (4, None, None), (0, None, None)),
-                Triangle((3, None, None), (0, None, None), (1, None, None)),
-                Triangle((3, None, None), (1, None, None), (2, None, None)),
-                Triangle((4, None, None), (7, None, None), (6, None, None)),
-                Triangle((4, None, None), (6, None, None), (5, None, None)),
+                Shape::new(Triangle((0, None, None), (4, None, None), (5, None, None)), Vec::new()),
+                Shape::new(Triangle((0, None, None), (5, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (5, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (6, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (6, None, None), (7, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (7, None, None), (3, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (7, None, None), (4, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (4, None, None), (0, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (0, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (1, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((4, None, None), (7, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((4, None, None), (6, None, None), (5, None, None)), Vec::new())
               )
             }
           )
@@ -943,38 +953,38 @@ f 45 41 44 48
               material_name: None,
               smooth_shading_group: 0,
               shapes: vec!(
-                Line((1, None, None), (0, None, None)),
-                Line((2, None, None), (1, None, None)),
-                Line((3, None, None), (2, None, None)),
-                Line((4, None, None), (3, None, None)),
-                Line((5, None, None), (4, None, None)),
-                Line((6, None, None), (5, None, None)),
-                Line((7, None, None), (6, None, None)),
-                Line((8, None, None), (7, None, None)),
-                Line((9, None, None), (8, None, None)),
-                Line((10, None, None), (9, None, None)),
-                Line((11, None, None), (10, None, None)),
-                Line((12, None, None), (11, None, None)),
-                Line((13, None, None), (12, None, None)),
-                Line((14, None, None), (13, None, None)),
-                Line((15, None, None), (14, None, None)),
-                Line((16, None, None), (15, None, None)),
-                Line((17, None, None), (16, None, None)),
-                Line((18, None, None), (17, None, None)),
-                Line((19, None, None), (18, None, None)),
-                Line((20, None, None), (19, None, None)),
-                Line((21, None, None), (20, None, None)),
-                Line((22, None, None), (21, None, None)),
-                Line((23, None, None), (22, None, None)),
-                Line((24, None, None), (23, None, None)),
-                Line((25, None, None), (24, None, None)),
-                Line((26, None, None), (25, None, None)),
-                Line((27, None, None), (26, None, None)),
-                Line((28, None, None), (27, None, None)),
-                Line((29, None, None), (28, None, None)),
-                Line((30, None, None), (29, None, None)),
-                Line((31, None, None), (30, None, None)),
-                Line((0, None, None), (31, None, None)),
+                Shape::new(Line((1, None, None), (0, None, None)), Vec::new()),
+                Shape::new(Line((2, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Line((3, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Line((4, None, None), (3, None, None)), Vec::new()),
+                Shape::new(Line((5, None, None), (4, None, None)), Vec::new()),
+                Shape::new(Line((6, None, None), (5, None, None)), Vec::new()),
+                Shape::new(Line((7, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Line((8, None, None), (7, None, None)), Vec::new()),
+                Shape::new(Line((9, None, None), (8, None, None)), Vec::new()),
+                Shape::new(Line((10, None, None), (9, None, None)), Vec::new()),
+                Shape::new(Line((11, None, None), (10, None, None)), Vec::new()),
+                Shape::new(Line((12, None, None), (11, None, None)), Vec::new()),
+                Shape::new(Line((13, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Line((14, None, None), (13, None, None)), Vec::new()),
+                Shape::new(Line((15, None, None), (14, None, None)), Vec::new()),
+                Shape::new(Line((16, None, None), (15, None, None)), Vec::new()),
+                Shape::new(Line((17, None, None), (16, None, None)), Vec::new()),
+                Shape::new(Line((18, None, None), (17, None, None)), Vec::new()),
+                Shape::new(Line((19, None, None), (18, None, None)), Vec::new()),
+                Shape::new(Line((20, None, None), (19, None, None)), Vec::new()),
+                Shape::new(Line((21, None, None), (20, None, None)), Vec::new()),
+                Shape::new(Line((22, None, None), (21, None, None)), Vec::new()),
+                Shape::new(Line((23, None, None), (22, None, None)), Vec::new()),
+                Shape::new(Line((24, None, None), (23, None, None)), Vec::new()),
+                Shape::new(Line((25, None, None), (24, None, None)), Vec::new()),
+                Shape::new(Line((26, None, None), (25, None, None)), Vec::new()),
+                Shape::new(Line((27, None, None), (26, None, None)), Vec::new()),
+                Shape::new(Line((28, None, None), (27, None, None)), Vec::new()),
+                Shape::new(Line((29, None, None), (28, None, None)), Vec::new()),
+                Shape::new(Line((30, None, None), (29, None, None)), Vec::new()),
+                Shape::new(Line((31, None, None), (30, None, None)), Vec::new()),
+                Shape::new(Line((0, None, None), (31, None, None)), Vec::new()),
               )
             }
           )
@@ -998,18 +1008,18 @@ f 45 41 44 48
               material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
               shapes: vec!(
-                Triangle((3, None, None), (0, None, None), (1, None, None)),
-                Triangle((3, None, None), (1, None, None), (2, None, None)),
-                Triangle((5, None, None), (4, None, None), (7, None, None)),
-                Triangle((5, None, None), (7, None, None), (6, None, None)),
-                Triangle((1, None, None), (0, None, None), (4, None, None)),
-                Triangle((1, None, None), (4, None, None), (5, None, None)),
-                Triangle((2, None, None), (1, None, None), (5, None, None)),
-                Triangle((2, None, None), (5, None, None), (6, None, None)),
-                Triangle((3, None, None), (2, None, None), (6, None, None)),
-                Triangle((3, None, None), (6, None, None), (7, None, None)),
-                Triangle((7, None, None), (4, None, None), (0, None, None)),
-                Triangle((7, None, None), (0, None, None), (3, None, None)),
+                Shape::new(Triangle((3, None, None), (0, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (1, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (4, None, None), (7, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (7, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (0, None, None), (4, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (4, None, None), (5, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (1, None, None), (5, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (5, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (2, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (6, None, None), (7, None, None)), Vec::new()),
+                Shape::new(Triangle((7, None, None), (4, None, None), (0, None, None)), Vec::new()),
+                Shape::new(Triangle((7, None, None), (0, None, None), (3, None, None)), Vec::new())
               )
             }
           )
@@ -1022,7 +1032,7 @@ f 45 41 44 48
 
 #[test]
 fn test_cube() {
-  use self::Shape::{ Triangle };
+  use self::Primitive::{ Triangle };
 
   let test_case =
 r#"
@@ -1100,18 +1110,18 @@ f 5/5 1/13 4/14 8/6
               material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
               shapes: vec![
-                Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
-                Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)),
-                Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)),
-                Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)),
-                Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)),
-                Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)),
-                Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)),
-                Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)),
-                Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)),
-                Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)),
-                Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)),
-                Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None))
+                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), Vec::new()),
+                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), Vec::new()),
+                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), Vec::new()),
+                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), Vec::new()),
+                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), Vec::new()),
+                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), Vec::new()),
+                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), Vec::new()),
+                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), Vec::new())
               ]
             }
           ]
@@ -1124,7 +1134,7 @@ f 5/5 1/13 4/14 8/6
 
 #[test]
 fn test_normals_no_tex() {
-  use self::Shape::{ Triangle };
+  use self::Primitive::{ Triangle };
 
   let test_case =
 r#"
@@ -1316,38 +1326,38 @@ f 3//32 2//32 4//32
             material_name: Some("Material.002".to_owned()),
             smooth_shading_group: 0,
             shapes: vec![
-              Triangle( (32, None, Some(0))  , (31, None, Some(0))  ,  (1, None, Some(0))  ),
-              Triangle( (2, None, Some(1))   , (0, None, Some(1))   ,  (1, None, Some(1))  ),
-              Triangle( (31, None, Some(2))  , (30, None, Some(2))  ,  (1, None, Some(2))  ),
-              Triangle( (30, None, Some(3))  , (29, None, Some(3))  ,  (1, None, Some(3))  ),
-              Triangle( (29, None, Some(4))  , (28, None, Some(4))  ,  (1, None, Some(4))  ),
-              Triangle( (28, None, Some(5))  , (27, None, Some(5))  ,  (1, None, Some(5))  ),
-              Triangle( (27, None, Some(6))  , (26, None, Some(6))  ,  (1, None, Some(6))  ),
-              Triangle( (26, None, Some(7))  , (25, None, Some(7))  ,  (1, None, Some(7))  ),
-              Triangle( (25, None, Some(8))  , (24, None, Some(8))  ,  (1, None, Some(8))  ),
-              Triangle( (24, None, Some(9))  , (23, None, Some(9))  ,  (1, None, Some(9))  ),
-              Triangle( (23, None, Some(10)) , (22, None, Some(10)) ,  (1, None, Some(10)) ),
-              Triangle( (22, None, Some(11)) , (21, None, Some(11)) ,  (1, None, Some(11)) ),
-              Triangle( (21, None, Some(12)) , (20, None, Some(12)) ,  (1, None, Some(12)) ),
-              Triangle( (20, None, Some(13)) , (19, None, Some(13)) ,  (1, None, Some(13)) ),
-              Triangle( (19, None, Some(14)) , (18, None, Some(14)) ,  (1, None, Some(14)) ),
-              Triangle( (18, None, Some(15)) , (17, None, Some(15)) ,  (1, None, Some(15)) ),
-              Triangle( (17, None, Some(16)) , (16, None, Some(16)) ,  (1, None, Some(16)) ),
-              Triangle( (16, None, Some(17)) , (15, None, Some(17)) ,  (1, None, Some(17)) ),
-              Triangle( (15, None, Some(18)) , (14, None, Some(18)) ,  (1, None, Some(18)) ),
-              Triangle( (14, None, Some(19)) , (13, None, Some(19)) ,  (1, None, Some(19)) ),
-              Triangle( (13, None, Some(20)) , (12, None, Some(20)) ,  (1, None, Some(20)) ),
-              Triangle( (12, None, Some(21)) , (11, None, Some(21)) ,  (1, None, Some(21)) ),
-              Triangle( (11, None, Some(22)) , (10, None, Some(22)) ,  (1, None, Some(22)) ),
-              Triangle( (10, None, Some(23)) , (9, None, Some(23))  ,  (1, None, Some(23)) ),
-              Triangle( (9, None, Some(24))  , (8, None, Some(24))  ,  (1, None, Some(24)) ),
-              Triangle( (8, None, Some(25))  , (7, None, Some(25))  ,  (1, None, Some(25)) ),
-              Triangle( (7, None, Some(26))  , (6, None, Some(26))  ,  (1, None, Some(26)) ),
-              Triangle( (6, None, Some(27))  , (5, None, Some(27))  ,  (1, None, Some(27)) ),
-              Triangle( (5, None, Some(28))  , (4, None, Some(28))  ,  (1, None, Some(28)) ),
-              Triangle( (4, None, Some(29))  , (3, None, Some(29))  ,  (1, None, Some(29)) ),
-              Triangle( (0, None, Some(30))  , (32, None, Some(30)) ,  (1, None, Some(30)) ),
-              Triangle( (3, None, Some(31))  , (2, None, Some(31))  ,  (1, None, Some(31)) ),
+              Shape::new(Triangle( (32, None, Some(0))  , (31, None, Some(0))  ,  (1, None, Some(0))  ), Vec::new()),
+              Shape::new(Triangle( (2, None, Some(1))   , (0, None, Some(1))   ,  (1, None, Some(1))  ), Vec::new()),
+              Shape::new(Triangle( (31, None, Some(2))  , (30, None, Some(2))  ,  (1, None, Some(2))  ), Vec::new()),
+              Shape::new(Triangle( (30, None, Some(3))  , (29, None, Some(3))  ,  (1, None, Some(3))  ), Vec::new()),
+              Shape::new(Triangle( (29, None, Some(4))  , (28, None, Some(4))  ,  (1, None, Some(4))  ), Vec::new()),
+              Shape::new(Triangle( (28, None, Some(5))  , (27, None, Some(5))  ,  (1, None, Some(5))  ), Vec::new()),
+              Shape::new(Triangle( (27, None, Some(6))  , (26, None, Some(6))  ,  (1, None, Some(6))  ), Vec::new()),
+              Shape::new(Triangle( (26, None, Some(7))  , (25, None, Some(7))  ,  (1, None, Some(7))  ), Vec::new()),
+              Shape::new(Triangle( (25, None, Some(8))  , (24, None, Some(8))  ,  (1, None, Some(8))  ), Vec::new()),
+              Shape::new(Triangle( (24, None, Some(9))  , (23, None, Some(9))  ,  (1, None, Some(9))  ), Vec::new()),
+              Shape::new(Triangle( (23, None, Some(10)) , (22, None, Some(10)) ,  (1, None, Some(10)) ), Vec::new()),
+              Shape::new(Triangle( (22, None, Some(11)) , (21, None, Some(11)) ,  (1, None, Some(11)) ), Vec::new()),
+              Shape::new(Triangle( (21, None, Some(12)) , (20, None, Some(12)) ,  (1, None, Some(12)) ), Vec::new()),
+              Shape::new(Triangle( (20, None, Some(13)) , (19, None, Some(13)) ,  (1, None, Some(13)) ), Vec::new()),
+              Shape::new(Triangle( (19, None, Some(14)) , (18, None, Some(14)) ,  (1, None, Some(14)) ), Vec::new()),
+              Shape::new(Triangle( (18, None, Some(15)) , (17, None, Some(15)) ,  (1, None, Some(15)) ), Vec::new()),
+              Shape::new(Triangle( (17, None, Some(16)) , (16, None, Some(16)) ,  (1, None, Some(16)) ), Vec::new()),
+              Shape::new(Triangle( (16, None, Some(17)) , (15, None, Some(17)) ,  (1, None, Some(17)) ), Vec::new()),
+              Shape::new(Triangle( (15, None, Some(18)) , (14, None, Some(18)) ,  (1, None, Some(18)) ), Vec::new()),
+              Shape::new(Triangle( (14, None, Some(19)) , (13, None, Some(19)) ,  (1, None, Some(19)) ), Vec::new()),
+              Shape::new(Triangle( (13, None, Some(20)) , (12, None, Some(20)) ,  (1, None, Some(20)) ), Vec::new()),
+              Shape::new(Triangle( (12, None, Some(21)) , (11, None, Some(21)) ,  (1, None, Some(21)) ), Vec::new()),
+              Shape::new(Triangle( (11, None, Some(22)) , (10, None, Some(22)) ,  (1, None, Some(22)) ), Vec::new()),
+              Shape::new(Triangle( (10, None, Some(23)) , (9, None, Some(23))  ,  (1, None, Some(23)) ), Vec::new()),
+              Shape::new(Triangle( (9, None, Some(24))  , (8, None, Some(24))  ,  (1, None, Some(24)) ), Vec::new()),
+              Shape::new(Triangle( (8, None, Some(25))  , (7, None, Some(25))  ,  (1, None, Some(25)) ), Vec::new()),
+              Shape::new(Triangle( (7, None, Some(26))  , (6, None, Some(26))  ,  (1, None, Some(26)) ), Vec::new()),
+              Shape::new(Triangle( (6, None, Some(27))  , (5, None, Some(27))  ,  (1, None, Some(27)) ), Vec::new()),
+              Shape::new(Triangle( (5, None, Some(28))  , (4, None, Some(28))  ,  (1, None, Some(28)) ), Vec::new()),
+              Shape::new(Triangle( (4, None, Some(29))  , (3, None, Some(29))  ,  (1, None, Some(29)) ), Vec::new()),
+              Shape::new(Triangle( (0, None, Some(30))  , (32, None, Some(30)) ,  (1, None, Some(30)) ), Vec::new()),
+              Shape::new(Triangle( (3, None, Some(31))  , (2, None, Some(31))  ,  (1, None, Some(31)) ), Vec::new())
             ]
           }
         ]
@@ -1360,7 +1370,7 @@ f 3//32 2//32 4//32
 
 #[test]
 fn test_smooth_shading_groups() {
-  use self::Shape::{ Triangle };
+  use self::Primitive::{ Triangle };
 
   let test_case =
 r#"
@@ -1515,72 +1525,75 @@ f 21 33 12
               material_name: Some("None".to_owned()),
               smooth_shading_group: 1,
               shapes: vec![
-                Triangle((6, None, None), (3, None, None), (2, None, None)),
-                Triangle((5, None, None), (2, None, None), (1, None, None)),
-                Triangle((5, None, None), (0, None, None), (4, None, None)),
-                Triangle((11, None, None), (6, None, None), (10, None, None)),
-                Triangle((10, None, None), (5, None, None), (9, None, None)),
-                Triangle((9, None, None), (4, None, None), (8, None, None)),
-                Triangle((16, None, None), (10, None, None), (15, None, None)),
-                Triangle((14, None, None), (10, None, None), (9, None, None)),
-                Triangle((13, None, None), (9, None, None), (8, None, None)),
-                Triangle((20, None, None), (15, None, None), (19, None, None)),
-                Triangle((19, None, None), (14, None, None), (18, None, None)),
-                Triangle((18, None, None), (13, None, None), (17, None, None)),
-                Triangle((24, None, None), (19, None, None), (23, None, None)),
-                Triangle((22, None, None), (19, None, None), (18, None, None)),
-                Triangle((22, None, None), (17, None, None), (21, None, None)),
-                Triangle((28, None, None), (23, None, None), (27, None, None)),
-                Triangle((26, None, None), (23, None, None), (22, None, None)),
-                Triangle((25, None, None), (22, None, None), (21, None, None)),
-                Triangle((32, None, None), (27, None, None), (31, None, None)),
-                Triangle((30, None, None), (27, None, None), (26, None, None)),
-                Triangle((29, None, None), (26, None, None), (25, None, None)),
-                Triangle((4, None, None), (0, None, None), (12, None, None)),
-                Triangle((8, None, None), (4, None, None), (12, None, None)),
-                Triangle((13, None, None), (8, None, None), (12, None, None)),
-                Triangle((17, None, None), (13, None, None), (12, None, None)),
-                Triangle((21, None, None), (17, None, None), (12, None, None)),
-                Triangle((25, None, None), (21, None, None), (12, None, None)),
-                Triangle((29, None, None), (25, None, None), (12, None, None)),
-                Triangle((3, None, None), (31, None, None), (2, None, None)),
-                Triangle((2, None, None), (30, None, None), (1, None, None)),
-                Triangle((1, None, None), (29, None, None), (0, None, None)),
-                Triangle((0, None, None), (29, None, None), (12, None, None)),
-                Triangle((6, None, None), (7, None, None), (3, None, None)),
-                Triangle((5, None, None), (6, None, None), (2, None, None)),
-                Triangle((5, None, None), (1, None, None), (0, None, None)),
-                Triangle((11, None, None), (7, None, None), (6, None, None)),
-                Triangle((10, None, None), (6, None, None), (5, None, None)),
-                Triangle((9, None, None), (5, None, None), (4, None, None)),
-                Triangle((16, None, None), (11, None, None), (10, None, None)),
-                Triangle((14, None, None), (15, None, None), (10, None, None)),
-                Triangle((13, None, None), (14, None, None), (9, None, None)),
-                Triangle((20, None, None), (16, None, None), (15, None, None)),
-                Triangle((19, None, None), (15, None, None), (14, None, None)),
-                Triangle((18, None, None), (14, None, None), (13, None, None)),
-                Triangle((24, None, None), (20, None, None), (19, None, None)),
-                Triangle((22, None, None), (23, None, None), (19, None, None)),
-                Triangle((22, None, None), (18, None, None), (17, None, None)),
-                Triangle((28, None, None), (24, None, None), (23, None, None)),
-                Triangle((26, None, None), (27, None, None), (23, None, None)),
-                Triangle((25, None, None), (26, None, None), (22, None, None)),
-                Triangle((32, None, None), (28, None, None), (27, None, None)),
-                Triangle((30, None, None), (31, None, None), (27, None, None)),
-                Triangle((29, None, None), (30, None, None), (26, None, None)),
-                Triangle((3, None, None), (32, None, None), (31, None, None)),
-                Triangle((2, None, None), (31, None, None), (30, None, None)),
-                Triangle((1, None, None), (30, None, None), (29, None, None))] },
+                Shape::new(Triangle((6, None, None), (3, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (2, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (0, None, None), (4, None, None)), Vec::new()),
+                Shape::new(Triangle((11, None, None), (6, None, None), (10, None, None)), Vec::new()),
+                Shape::new(Triangle((10, None, None), (5, None, None), (9, None, None)), Vec::new()),
+                Shape::new(Triangle((9, None, None), (4, None, None), (8, None, None)), Vec::new()),
+                Shape::new(Triangle((16, None, None), (10, None, None), (15, None, None)), Vec::new()),
+                Shape::new(Triangle((14, None, None), (10, None, None), (9, None, None)), Vec::new()),
+                Shape::new(Triangle((13, None, None), (9, None, None), (8, None, None)), Vec::new()),
+                Shape::new(Triangle((20, None, None), (15, None, None), (19, None, None)), Vec::new()),
+                Shape::new(Triangle((19, None, None), (14, None, None), (18, None, None)), Vec::new()),
+                Shape::new(Triangle((18, None, None), (13, None, None), (17, None, None)), Vec::new()),
+                Shape::new(Triangle((24, None, None), (19, None, None), (23, None, None)), Vec::new()),
+                Shape::new(Triangle((22, None, None), (19, None, None), (18, None, None)), Vec::new()),
+                Shape::new(Triangle((22, None, None), (17, None, None), (21, None, None)), Vec::new()),
+                Shape::new(Triangle((28, None, None), (23, None, None), (27, None, None)), Vec::new()),
+                Shape::new(Triangle((26, None, None), (23, None, None), (22, None, None)), Vec::new()),
+                Shape::new(Triangle((25, None, None), (22, None, None), (21, None, None)), Vec::new()),
+                Shape::new(Triangle((32, None, None), (27, None, None), (31, None, None)), Vec::new()),
+                Shape::new(Triangle((30, None, None), (27, None, None), (26, None, None)), Vec::new()),
+                Shape::new(Triangle((29, None, None), (26, None, None), (25, None, None)), Vec::new()),
+                Shape::new(Triangle((4, None, None), (0, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((8, None, None), (4, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((13, None, None), (8, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((17, None, None), (13, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((21, None, None), (17, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((25, None, None), (21, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((29, None, None), (25, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (31, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (30, None, None), (1, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (29, None, None), (0, None, None)), Vec::new()),
+                Shape::new(Triangle((0, None, None), (29, None, None), (12, None, None)), Vec::new()),
+                Shape::new(Triangle((6, None, None), (7, None, None), (3, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (6, None, None), (2, None, None)), Vec::new()),
+                Shape::new(Triangle((5, None, None), (1, None, None), (0, None, None)), Vec::new()),
+                Shape::new(Triangle((11, None, None), (7, None, None), (6, None, None)), Vec::new()),
+                Shape::new(Triangle((10, None, None), (6, None, None), (5, None, None)), Vec::new()),
+                Shape::new(Triangle((9, None, None), (5, None, None), (4, None, None)), Vec::new()),
+                Shape::new(Triangle((16, None, None), (11, None, None), (10, None, None)), Vec::new()),
+                Shape::new(Triangle((14, None, None), (15, None, None), (10, None, None)), Vec::new()),
+                Shape::new(Triangle((13, None, None), (14, None, None), (9, None, None)), Vec::new()),
+                Shape::new(Triangle((20, None, None), (16, None, None), (15, None, None)), Vec::new()),
+                Shape::new(Triangle((19, None, None), (15, None, None), (14, None, None)), Vec::new()),
+                Shape::new(Triangle((18, None, None), (14, None, None), (13, None, None)), Vec::new()),
+                Shape::new(Triangle((24, None, None), (20, None, None), (19, None, None)), Vec::new()),
+                Shape::new(Triangle((22, None, None), (23, None, None), (19, None, None)), Vec::new()),
+                Shape::new(Triangle((22, None, None), (18, None, None), (17, None, None)), Vec::new()),
+                Shape::new(Triangle((28, None, None), (24, None, None), (23, None, None)), Vec::new()),
+                Shape::new(Triangle((26, None, None), (27, None, None), (23, None, None)), Vec::new()),
+                Shape::new(Triangle((25, None, None), (26, None, None), (22, None, None)), Vec::new()),
+                Shape::new(Triangle((32, None, None), (28, None, None), (27, None, None)), Vec::new()),
+                Shape::new(Triangle((30, None, None), (31, None, None), (27, None, None)), Vec::new()),
+                Shape::new(Triangle((29, None, None), (30, None, None), (26, None, None)), Vec::new()),
+                Shape::new(Triangle((3, None, None), (32, None, None), (31, None, None)), Vec::new()),
+                Shape::new(Triangle((2, None, None), (31, None, None), (30, None, None)), Vec::new()),
+                Shape::new(Triangle((1, None, None), (30, None, None), (29, None, None)), Vec::new())
+              ]
+            },
             Geometry {
               material_name: Some("None".to_owned()),
               smooth_shading_group: 2,
               shapes: vec![
-                Triangle((7, None, None), (32, None, None), (3, None, None)),
-                Triangle((24, None, None), (28, None, None), (32, None, None)),
-                Triangle((20, None, None), (11, None, None), (16, None, None)),
-                Triangle((7, None, None), (11, None, None), (32, None, None)),
-                Triangle((24, None, None), (32, None, None), (20, None, None)),
-                Triangle((11, None, None), (20, None, None), (32, None, None))]
+                Shape::new(Triangle((7, None, None), (32, None, None), (3, None, None)), Vec::new()),
+                Shape::new(Triangle((24, None, None), (28, None, None), (32, None, None)), Vec::new()),
+                Shape::new(Triangle((20, None, None), (11, None, None), (16, None, None)), Vec::new()),
+                Shape::new(Triangle((7, None, None), (11, None, None), (32, None, None)), Vec::new()),
+                Shape::new(Triangle((24, None, None), (32, None, None), (20, None, None)), Vec::new()),
+                Shape::new(Triangle((11, None, None), (20, None, None), (32, None, None)), Vec::new())
+              ]
             }
           ]
         }
@@ -1595,7 +1608,7 @@ f 21 33 12
 
 #[test]
 fn no_mtls() {
-  use self::Shape::{ Triangle };
+  use self::Primitive::{ Triangle };
 
   let test_case =
 r#"
@@ -1671,18 +1684,18 @@ f 5/5 1/13 4/14 8/6
               material_name: None,
               smooth_shading_group: 0,
               shapes: vec![
-                Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)),
-                Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)),
-                Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)),
-                Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)),
-                Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)),
-                Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)),
-                Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)),
-                Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)),
-                Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)),
-                Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)),
-                Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)),
-                Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None))
+                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), Vec::new()),
+                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), Vec::new()),
+                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), Vec::new()),
+                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), Vec::new()),
+                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), Vec::new()),
+                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), Vec::new()),
+                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), Vec::new()),
+                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), Vec::new()),
+                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), Vec::new())
               ]
             }
           ]
