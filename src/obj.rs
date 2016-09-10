@@ -1376,8 +1376,7 @@ f 3//32 2//32 4//32
             (0.000000 , -1.000000 , -0.000000))
           .into_iter()
           .map(|(x, y, z)| Normal { x: x, y: y, z: z })
-          .collect()
-        ],
+          .collect(),
         geometry: vec![
           Geometry {
             material_name: Some("Material.002".to_owned()),
