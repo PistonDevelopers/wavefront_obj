@@ -1110,53 +1110,71 @@ f 5/5 1/13 4/14 8/6
       objects: vec![
         Object {
           name: "Cube".to_owned(),
-          vertices: vec![
-            Vertex { x:  1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z: -1.0 }
-          ],
-          tex_vertices: vec![
-            TVertex { x: 1.004952, y: 0.498633 },
-            TVertex { x: 0.754996, y: 0.498236 },
-            TVertex { x: 0.755393, y: 0.248279 },
-            TVertex { x: 1.005349, y: 0.248677 },
-            TVertex { x: 0.255083, y: 0.497442 },
-            TVertex { x: 0.25548, y: 0.247485 },
-            TVertex { x: 0.505437, y: 0.247882 },
-            TVertex { x: 0.505039, y: 0.497839 },
-            TVertex { x: 0.754598, y: 0.748193 },
-            TVertex { x: 0.504642, y: 0.747795 },
-            TVertex { x: 0.505834, y: -0.002074 },
-            TVertex { x: 0.75579, y: -0.001677 },
-            TVertex { x: 0.005127, y: 0.497044 },
-            TVertex { x: 0.005524, y: 0.247088 }
-          ],
-          normals : vec![],
-          geometry: vec![
+          vertices:
+            vec!(
+              ( 1.0, -1.0, -1.0),
+              ( 1.0, -1.0,  1.0),
+              (-1.0, -1.0,  1.0),
+              (-1.0, -1.0, -1.0),
+              ( 1.0,  1.0, -1.0),
+              ( 1.0,  1.0,  1.0),
+              (-1.0,  1.0,  1.0),
+              (-1.0,  1.0, -1.0))
+            .into_iter()
+            .map(|(x, y, z)|
+              Vertex {
+                x: x as f64,
+                y: y as f64,
+                z: z as f64 })
+            .collect(),
+          tex_vertices:
+            vec!(
+              (1.004952, 0.498633),
+              (0.754996, 0.498236),
+              (0.755393, 0.248279),
+              (1.005349, 0.248677),
+              (0.255083, 0.497442),
+              (0.25548, 0.247485),
+              (0.505437, 0.247882),
+              (0.505039, 0.497839),
+              (0.754598, 0.748193),
+              (0.504642, 0.747795),
+              (0.505834, -0.002074),
+              (0.75579, -0.001677),
+              (0.005127, 0.497044),
+              (0.005524, 0.247088))
+            .into_iter()
+            .map(|(x, y)| TVertex { x: x, y: y })
+            .collect(),
+          normals : vec!(),
+          geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
-              shapes: vec![
-                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), Vec::new()),
-                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), Vec::new()),
-                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), Vec::new()),
-                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), Vec::new()),
-                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), Vec::new()),
-                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), Vec::new()),
-                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), Vec::new()),
-                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), Vec::new()),
-                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), Vec::new()),
-                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), Vec::new()),
-                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), Vec::new()),
-                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), Vec::new())
-              ]
+              shapes:
+                vec!(
+                  (3, 3, 0, 0, 1, 1),
+                  (3, 3, 1, 1, 2, 2),
+                  (5, 7, 4, 4, 7, 5),
+                  (5, 7, 7, 5, 6, 6),
+                  (1, 1, 0, 8, 4, 9),
+                  (1, 1, 4, 9, 5, 7),
+                  (2, 2, 1, 1, 5, 7),
+                  (2, 2, 5, 7, 6, 6),
+                  (3, 11, 2, 2, 6, 6),
+                  (3, 11, 6, 6, 7, 10),
+                  (7, 5, 4, 4, 0, 12),
+                  (7, 5, 0, 12, 3, 13))
+                .into_iter()
+                .map(|(vx, tx, vy, ty, vz, tz)|
+                   Shape::new(Triangle(
+                     (vx, Some(tx), None),
+                     (vy, Some(ty), None),
+                     (vz, Some(tz), None)),
+                     Vec::new()))
+                .collect(),
             }
-          ]
+          )
         }
       ]
     });
