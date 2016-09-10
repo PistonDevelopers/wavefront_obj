@@ -741,20 +741,17 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_groups(&mut self) -> Result<Vec<GroupName>, ParseError> {
-    // g without any name is valid and means default group
-    if let Some("\n") = sliced(&self.peek()) {
-      return Ok(Vec::new());
-    }
-
     let mut groups = Vec::new();
-    loop {
-      let name = try!(self.parse_str());
-      groups.push(name);
 
+    loop {
       // ends the list of group names
+      // g without any name is valid and means default group
       if let Some("\n") = sliced(&self.peek()) {
         break;
       }
+
+      let name = try!(self.parse_str());
+      groups.push(name);
     }
 
     Ok(groups)
@@ -877,115 +874,139 @@ f 45 41 44 48
       objects: vec!(
         Object {
           name: "Cube.001".to_owned(),
-          vertices: vec!(
-            Vertex { x: -1.0, y: -1.0, z: 1.0 },
-            Vertex { x: -1.0, y: -1.0, z: -1.0 },
-            Vertex { x: 1.0, y: -1.0, z: -1.0 },
-            Vertex { x: 1.0, y: -1.0, z: 1.0 },
-            Vertex { x: -1.0, y: 1.0, z: 1.0 },
-            Vertex { x: -1.0, y: 1.0, z: -1.0 },
-            Vertex { x: 1.0, y: 1.0, z: -1.0 },
-            Vertex { x: 1.0, y: 1.0, z: 1.0 }
-          ),
+          vertices:
+            vec!((-1, -1,  1),
+                 (-1, -1, -1),
+                 ( 1, -1, -1),
+                 ( 1, -1,  1),
+                 (-1,  1,  1),
+                 (-1,  1, -1),
+                 ( 1,  1, -1),
+                 ( 1,  1,  1))
+            .into_iter()
+            .map(|(x, y, z)|
+              Vertex {
+                x: x as f64,
+                y: y as f64,
+                z: z as f64
+              })
+            .collect(),
           tex_vertices: vec!(),
           normals: vec!(),
           geometry: vec!(
             Geometry {
               material_name: Some("None".to_owned()),
               smooth_shading_group: 0,
-              shapes: vec!(
-                Shape::new(Triangle((0, None, None), (4, None, None), (5, None, None)), Vec::new()),
-                Shape::new(Triangle((0, None, None), (5, None, None), (1, None, None)), Vec::new()),
-                Shape::new(Triangle((1, None, None), (5, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Triangle((1, None, None), (6, None, None), (2, None, None)), Vec::new()),
-                Shape::new(Triangle((2, None, None), (6, None, None), (7, None, None)), Vec::new()),
-                Shape::new(Triangle((2, None, None), (7, None, None), (3, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (7, None, None), (4, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (4, None, None), (0, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (0, None, None), (1, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (1, None, None), (2, None, None)), Vec::new()),
-                Shape::new(Triangle((4, None, None), (7, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Triangle((4, None, None), (6, None, None), (5, None, None)), Vec::new())
-              )
+              shapes:
+                vec!((0, 4, 5),
+                     (0, 5, 1),
+                     (1, 5, 6),
+                     (1, 6, 2),
+                     (2, 6, 7),
+                     (2, 7, 3),
+                     (3, 7, 4),
+                     (3, 4, 0),
+                     (3, 0, 1),
+                     (3, 1, 2),
+                     (4, 7, 6),
+                     (4, 6, 5))
+                .into_iter()
+                .map(|(x, y, z)|
+                       Shape::new(Triangle(
+                         (x, None, None),
+                         (y, None, None),
+                         (z, None, None)),
+                         Vec::new()))
+                .collect()
             }
           )
         },
         Object {
           name: "Circle".to_owned(),
-          vertices: vec!(
-            Vertex { x: 0.0, y: 0.0, z: -1.0 },
-            Vertex { x: -0.19509, y: 0.0, z: -0.980785 },
-            Vertex { x: -0.382683, y: 0.0, z: -0.92388 },
-            Vertex { x: -0.55557, y: 0.0, z: -0.83147 },
-            Vertex { x: -0.707107, y: 0.0, z: -0.707107 },
-            Vertex { x: -0.83147, y: 0.0, z: -0.55557 },
-            Vertex { x: -0.92388, y: 0.0, z: -0.382683 },
-            Vertex { x: -0.980785, y: 0.0, z: -0.19509 },
-            Vertex { x: -1.0, y: 0.0, z: 0.0 },
-            Vertex { x: -0.980785, y: 0.0, z: 0.19509 },
-            Vertex { x: -0.92388, y: 0.0, z: 0.382683 },
-            Vertex { x: -0.83147, y: 0.0, z: 0.55557 },
-            Vertex { x: -0.707107, y: 0.0, z: 0.707107 },
-            Vertex { x: -0.55557, y: 0.0, z: 0.83147 },
-            Vertex { x: -0.382683, y: 0.0, z: 0.92388 },
-            Vertex { x: -0.19509, y: 0.0, z: 0.980785 },
-            Vertex { x: 0.0, y: 0.0, z: 1.0 },
-            Vertex { x: 0.195091, y: 0.0, z: 0.980785 },
-            Vertex { x: 0.382684, y: 0.0, z: 0.923879 },
-            Vertex { x: 0.555571, y: 0.0, z: 0.831469 },
-            Vertex { x: 0.707107, y: 0.0, z: 0.707106 },
-            Vertex { x: 0.83147, y: 0.0, z: 0.55557 },
-            Vertex { x: 0.92388, y: 0.0, z: 0.382683 },
-            Vertex { x: 0.980785, y: 0.0, z: 0.195089 },
-            Vertex { x: 1.0, y: 0.0, z: -0.000001 },
-            Vertex { x: 0.980785, y: 0.0, z: -0.195091 },
-            Vertex { x: 0.923879, y: 0.0, z: -0.382684 },
-            Vertex { x: 0.831469, y: 0.0, z: -0.555571 },
-            Vertex { x: 0.707106, y: 0.0, z: -0.707108 },
-            Vertex { x: 0.555569, y: 0.0, z: -0.83147 },
-            Vertex { x: 0.382682, y: 0.0, z: -0.92388 },
-            Vertex { x: 0.195089, y: 0.0, z: -0.980786 }
-          ),
+          vertices:
+            vec!(
+              (0.0, 0.0, -1.0),
+              (-0.19509, 0.0, -0.980785),
+              (-0.382683, 0.0, -0.92388),
+              (-0.55557, 0.0, -0.83147),
+              (-0.707107, 0.0, -0.707107),
+              (-0.83147, 0.0, -0.55557),
+              (-0.92388, 0.0, -0.382683),
+              (-0.980785, 0.0, -0.19509),
+              (-1.0, 0.0, 0.0),
+              (-0.980785, 0.0, 0.19509),
+              (-0.92388, 0.0, 0.382683),
+              (-0.83147, 0.0, 0.55557),
+              (-0.707107, 0.0, 0.707107),
+              (-0.55557, 0.0, 0.83147),
+              (-0.382683, 0.0, 0.92388),
+              (-0.19509, 0.0, 0.980785),
+              (0.0, 0.0, 1.0),
+              (0.195091, 0.0, 0.980785),
+              (0.382684, 0.0, 0.923879),
+              (0.555571, 0.0, 0.831469),
+              (0.707107, 0.0, 0.707106),
+              (0.83147, 0.0, 0.55557),
+              (0.92388, 0.0, 0.382683),
+              (0.980785, 0.0, 0.195089),
+              (1.0, 0.0, -0.000001),
+              (0.980785, 0.0, -0.195091),
+              (0.923879, 0.0, -0.382684),
+              (0.831469, 0.0, -0.555571),
+              (0.707106, 0.0, -0.707108),
+              (0.555569, 0.0, -0.83147),
+              (0.382682, 0.0, -0.92388),
+              (0.195089, 0.0, -0.980786))
+            .into_iter()
+            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+            .collect(),
           tex_vertices: vec!(),
           normals: vec!(),
           geometry: vec!(
             Geometry {
               material_name: None,
               smooth_shading_group: 0,
-              shapes: vec!(
-                Shape::new(Line((1, None, None), (0, None, None)), Vec::new()),
-                Shape::new(Line((2, None, None), (1, None, None)), Vec::new()),
-                Shape::new(Line((3, None, None), (2, None, None)), Vec::new()),
-                Shape::new(Line((4, None, None), (3, None, None)), Vec::new()),
-                Shape::new(Line((5, None, None), (4, None, None)), Vec::new()),
-                Shape::new(Line((6, None, None), (5, None, None)), Vec::new()),
-                Shape::new(Line((7, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Line((8, None, None), (7, None, None)), Vec::new()),
-                Shape::new(Line((9, None, None), (8, None, None)), Vec::new()),
-                Shape::new(Line((10, None, None), (9, None, None)), Vec::new()),
-                Shape::new(Line((11, None, None), (10, None, None)), Vec::new()),
-                Shape::new(Line((12, None, None), (11, None, None)), Vec::new()),
-                Shape::new(Line((13, None, None), (12, None, None)), Vec::new()),
-                Shape::new(Line((14, None, None), (13, None, None)), Vec::new()),
-                Shape::new(Line((15, None, None), (14, None, None)), Vec::new()),
-                Shape::new(Line((16, None, None), (15, None, None)), Vec::new()),
-                Shape::new(Line((17, None, None), (16, None, None)), Vec::new()),
-                Shape::new(Line((18, None, None), (17, None, None)), Vec::new()),
-                Shape::new(Line((19, None, None), (18, None, None)), Vec::new()),
-                Shape::new(Line((20, None, None), (19, None, None)), Vec::new()),
-                Shape::new(Line((21, None, None), (20, None, None)), Vec::new()),
-                Shape::new(Line((22, None, None), (21, None, None)), Vec::new()),
-                Shape::new(Line((23, None, None), (22, None, None)), Vec::new()),
-                Shape::new(Line((24, None, None), (23, None, None)), Vec::new()),
-                Shape::new(Line((25, None, None), (24, None, None)), Vec::new()),
-                Shape::new(Line((26, None, None), (25, None, None)), Vec::new()),
-                Shape::new(Line((27, None, None), (26, None, None)), Vec::new()),
-                Shape::new(Line((28, None, None), (27, None, None)), Vec::new()),
-                Shape::new(Line((29, None, None), (28, None, None)), Vec::new()),
-                Shape::new(Line((30, None, None), (29, None, None)), Vec::new()),
-                Shape::new(Line((31, None, None), (30, None, None)), Vec::new()),
-                Shape::new(Line((0, None, None), (31, None, None)), Vec::new()),
-              )
+              shapes:
+                vec!(
+                  (1, 0),
+                  (2, 1),
+                  (3, 2),
+                  (4, 3),
+                  (5, 4),
+                  (6, 5),
+                  (7, 6),
+                  (8, 7),
+                  (9, 8),
+                  (10, 9),
+                  (11, 10),
+                  (12, 11),
+                  (13, 12),
+                  (14, 13),
+                  (15, 14),
+                  (16, 15),
+                  (17, 16),
+                  (18, 17),
+                  (19, 18),
+                  (20, 19),
+                  (21, 20),
+                  (22, 21),
+                  (23, 22),
+                  (24, 23),
+                  (25, 24),
+                  (26, 25),
+                  (27, 26),
+                  (28, 27),
+                  (29, 28),
+                  (30, 29),
+                  (31, 30),
+                  (0, 31))
+                .into_iter()
+                .map(|(x, y)|
+                  Shape::new(Line(
+                    (x, None, None),
+                    (y, None, None)),
+                    Vec::new()))
+                .collect(),
             }
           )
         },
