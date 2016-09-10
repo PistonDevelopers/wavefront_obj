@@ -47,12 +47,25 @@ pub struct Geometry {
   pub shapes: Vec<Shape>,
 }
 
-/// The various shapes supported by this library.
+/// A shape gathers a primitive and groups.
+///
+/// Each shape is associated with 0 or many groups. Those are text identifiers used to gather
+/// geometry elements into different groups.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Shape {
+  primitive: Primitive,
+  groups: Vec<GroupName>
+}
+
+/// Name of a group.
+type GroupName = String;
+
+/// The various primitives supported by this library.
 ///
 /// Convex polygons more complicated than a triangle are automatically
 /// converted into triangles.
 #[derive(Clone, Copy, Debug, Hash, PartialEq)]
-pub enum Shape {
+pub enum Primitive {
   /// A point specified by its position.
   Point(VTNIndex),
   /// A line specified by its endpoints.
@@ -146,14 +159,14 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
   s.as_ref().map(|s| &s[..])
 }
 
-/// Blender exports shapes as a list of the vertices representing their corners.
+/// Blender exports primitives as a list of the vertices representing their corners.
 /// This function turns that into a set of OpenGL-usable shapes - i.e. points,
 /// lines, or triangles.
-fn to_triangles(xs: &[VTNIndex]) -> Vec<Shape> {
+fn to_triangles(xs: &[VTNIndex]) -> Vec<Primitive> {
   match xs.len() {
     0 => return vec!(),
-    1 => return vec!(Shape::Point(xs[0])),
-    2 => return vec!(Shape::Line(xs[0], xs[1])),
+    1 => return vec!(Primitive::Point(xs[0])),
+    2 => return vec!(Primitive::Line(xs[0], xs[1])),
     _ => {},
   }
 
@@ -162,13 +175,13 @@ fn to_triangles(xs: &[VTNIndex]) -> Vec<Shape> {
   xs[..xs.len()-1]
     .iter()
     .zip(xs[1..xs.len()-1].iter())
-    .map(|(&x, &y)| Shape::Triangle(last_elem, x, y))
+    .map(|(&x, &y)| Primitive::Triangle(last_elem, x, y))
     .collect()
 }
 
 #[test]
 fn test_to_triangles() {
-  use self::Shape::{ Line, Point, Triangle };
+  use self::Primitive::{ Line, Point, Triangle };
 
   assert_eq!(to_triangles(&[]), vec!());
 
@@ -540,7 +553,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_face(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-               valid_nx: (usize, usize)) -> Result<Vec<Shape>, ParseError> {
+               valid_nx: (usize, usize), current_groups: &Vec<GroupName>) -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
       Some("l") => {},
@@ -560,7 +573,10 @@ impl<'a> Parser<'a> {
       }
     }
 
-    Ok(to_triangles(&corner_list))
+    Ok(to_triangles(&corner_list).into_iter().map(|prim| Shape {
+      primitive: prim,
+      groups: current_groups.clone()
+    }).collect())
   }
 
   fn parse_geometries(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
@@ -570,6 +586,7 @@ impl<'a> Parser<'a> {
 
     let mut current_material   = None;
     let mut smooth_shading_group = 0;
+    let mut current_groups = Vec::new();
 
     loop {
       match sliced(&self.peek()) {
@@ -600,8 +617,13 @@ impl<'a> Parser<'a> {
         Some("f") | Some("l") => {
           shapes.extend(
             try!(self.parse_face(
-              valid_vtx, valid_tx, valid_nx))
+              valid_vtx, valid_tx, valid_nx, &current_groups))
             .into_iter());
+        },
+        Some("g") => {
+          self.advance();
+          let names = try!(self.parse_groups());
+          current_groups = names;
         },
         _ => break,
       }
@@ -706,6 +728,26 @@ impl<'a> Parser<'a> {
       material_library: material_library,
       objects:          objects,
     })
+  }
+
+  fn parse_groups(&mut self) -> Result<Vec<GroupName>, ParseError> {
+    // g without any name is valid and means default group
+    if let Some("\n") = sliced(&self.peek()) {
+      return Ok(Vec::new());
+    }
+
+    let mut groups = Vec::new();
+    loop {
+      let name = try!(self.parse_str());
+      groups.push(name);
+
+      // ends the list of group names
+      if let Some("\n") = sliced(&self.peek()) {
+        break;
+      }
+    }
+
+    Ok(groups)
   }
 }
 
