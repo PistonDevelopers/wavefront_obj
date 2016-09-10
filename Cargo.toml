@@ -1,14 +1,13 @@
 [package]
 
-name = "wavefront_obj"
-version = "3.0.0"
+name    = "wavefront_obj"
+version = "4.0.0"
 authors = [
     "Clark Gaebel <cg.wowus.cg@gmail.com>",
 ]
-keywords = ["3d", "format", "wavefront", "obj", "piston"]
+keywords    = ["3d", "format", "wavefront", "obj", "piston"]
 description = "A parser for the Wavefront .obj file format."
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/PistonDevelopers/wavefront_obj.git"
-homepage = "https://github.com/PistonDevelopers/wavefront_obj"
-
+license     = "MIT"
+readme      = "README.md"
+repository  = "https://github.com/PistonDevelopers/wavefront_obj.git"
+homepage    = "https://github.com/PistonDevelopers/wavefront_obj"
