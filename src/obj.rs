@@ -1023,7 +1023,7 @@ f 45 41 44 48
               (-1.0,       1.0,  1.0),
               (-1.0,       1.0, -1.0))
             .into_iter()
-            .map(|(x, y, z) Vertex { x: x, y: y, z: z })
+            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
             .collect(),
           tex_vertices: vec!(),
           normals: vec!(),
