@@ -53,8 +53,10 @@ pub struct Geometry {
 /// geometry elements into different groups.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
-  primitive: Primitive,
-  groups: Vec<GroupName>
+  /// The primitive of the shape.
+  pub primitive: Primitive,
+  /// Associated groups. No associated group means the shape uses the default group.
+  pub groups: Vec<GroupName>
 }
 
 /// Name of a group.
