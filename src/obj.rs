@@ -1031,19 +1031,28 @@ f 45 41 44 48
             Geometry {
               material_name: Some("Material".to_owned()),
               smooth_shading_group: 0,
-              shapes: vec!(
-                Shape::new(Triangle((3, None, None), (0, None, None), (1, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (1, None, None), (2, None, None)), Vec::new()),
-                Shape::new(Triangle((5, None, None), (4, None, None), (7, None, None)), Vec::new()),
-                Shape::new(Triangle((5, None, None), (7, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Triangle((1, None, None), (0, None, None), (4, None, None)), Vec::new()),
-                Shape::new(Triangle((1, None, None), (4, None, None), (5, None, None)), Vec::new()),
-                Shape::new(Triangle((2, None, None), (1, None, None), (5, None, None)), Vec::new()),
-                Shape::new(Triangle((2, None, None), (5, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (2, None, None), (6, None, None)), Vec::new()),
-                Shape::new(Triangle((3, None, None), (6, None, None), (7, None, None)), Vec::new()),
-                Shape::new(Triangle((7, None, None), (4, None, None), (0, None, None)), Vec::new()),
-                Shape::new(Triangle((7, None, None), (0, None, None), (3, None, None)), Vec::new())
+              shapes:
+                vec!(
+                  (3, 0, 1)
+                  (3, 1, 2)
+                  (5, 4, 7)
+                  (5, 7, 6)
+                  (1, 0, 4)
+                  (1, 4, 5)
+                  (2, 1, 5)
+                  (2, 5, 6)
+                  (3, 2, 6)
+                  (3, 6, 7)
+                  (7, 4, 0)
+                  (7, 0, 3))
+                .into_iter()
+                .map(|(x, y, z)|
+                  Shape::new(Triangle(
+                    (x, None, None),
+                    (y, None, None),
+                    (z, None, None)),
+                    Vec::new()))
+                .collect()
               )
             }
           )
