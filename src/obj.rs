@@ -1706,6 +1706,209 @@ f 5/5 1/13 4/14 8/6
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
+#[test]
+fn one_group() {
+  use self::Primitive::Triangle;
+
+  let input =
+r#"
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952 0.498633
+vt 0.754996 0.498236
+vt 0.755393 0.248279
+vt 1.005349 0.248677
+vt 0.255083 0.497442
+vt 0.255480 0.247485
+vt 0.505437 0.247882
+vt 0.505039 0.497839
+vt 0.754598 0.748193
+vt 0.504642 0.747795
+vt 0.505834 -0.002074
+vt 0.755790 -0.001677
+vt 0.005127 0.497044
+vt 0.005524 0.247088
+g all
+s off
+f 1/1 2/2 3/3 4/4
+f 5/5 8/6 7/7 6/8
+f 1/9 5/10 6/8 2/2
+f 2/2 6/8 7/7 3/3
+f 3/3 7/7 8/11 4/12
+f 5/5 1/13 4/14 8/6
+"#;
+
+  let expected =
+    ObjSet {
+      material_library: None,
+      objects: vec![
+        Object {
+          name: "Cube".to_owned(),
+          vertices: vec![
+            Vertex { x:  1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z: -1.0 }
+          ],
+          tex_vertices: vec![
+            TVertex { x: 1.004952, y: 0.498633 },
+            TVertex { x: 0.754996, y: 0.498236 },
+            TVertex { x: 0.755393, y: 0.248279 },
+            TVertex { x: 1.005349, y: 0.248677 },
+            TVertex { x: 0.255083, y: 0.497442 },
+            TVertex { x: 0.25548, y: 0.247485 },
+            TVertex { x: 0.505437, y: 0.247882 },
+            TVertex { x: 0.505039, y: 0.497839 },
+            TVertex { x: 0.754598, y: 0.748193 },
+            TVertex { x: 0.504642, y: 0.747795 },
+            TVertex { x: 0.505834, y: -0.002074 },
+            TVertex { x: 0.75579, y: -0.001677 },
+            TVertex { x: 0.005127, y: 0.497044 },
+            TVertex { x: 0.005524, y: 0.247088 }
+          ],
+          normals : vec![],
+          geometry: vec![
+            Geometry {
+              material_name: None,
+              smooth_shading_group: 0,
+              shapes: vec![
+                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), vec!["all".into()]),
+                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), vec!["all".into()]),
+                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), vec!["all".into()]),
+                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), vec!["all".into()]),
+                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), vec!["all".into()]),
+                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), vec!["all".into()]),
+                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), vec!["all".into()]),
+                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), vec!["all".into()]),
+                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), vec!["all".into()]),
+                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), vec!["all".into()]),
+                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), vec!["all".into()]),
+                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), vec!["all".into()])
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+  assert_eq!(parse(input.into()), Ok(expected));
+}
+
+#[test]
+fn several_groups() {
+  use self::Primitive::Triangle;
+
+  let input =
+r#"
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952 0.498633
+vt 0.754996 0.498236
+vt 0.755393 0.248279
+vt 1.005349 0.248677
+vt 0.255083 0.497442
+vt 0.255480 0.247485
+vt 0.505437 0.247882
+vt 0.505039 0.497839
+vt 0.754598 0.748193
+vt 0.504642 0.747795
+vt 0.505834 -0.002074
+vt 0.755790 -0.001677
+vt 0.005127 0.497044
+vt 0.005524 0.247088
+s off
+g face one
+f 1/1 2/2 3/3 4/4
+g face two
+f 5/5 8/6 7/7 6/8
+g face three
+f 1/9 5/10 6/8 2/2
+g face four
+f 2/2 6/8 7/7 3/3
+g face five
+f 3/3 7/7 8/11 4/12
+g face six
+f 5/5 1/13 4/14 8/6
+"#;
+
+  let expected =
+    ObjSet {
+      material_library: None,
+      objects: vec![
+        Object {
+          name: "Cube".to_owned(),
+          vertices: vec![
+            Vertex { x:  1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z:  1.0 },
+            Vertex { x: -1.0, y: -1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z: -1.0 },
+            Vertex { x:  1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z:  1.0 },
+            Vertex { x: -1.0, y:  1.0, z: -1.0 }
+          ],
+          tex_vertices: vec![
+            TVertex { x: 1.004952, y: 0.498633 },
+            TVertex { x: 0.754996, y: 0.498236 },
+            TVertex { x: 0.755393, y: 0.248279 },
+            TVertex { x: 1.005349, y: 0.248677 },
+            TVertex { x: 0.255083, y: 0.497442 },
+            TVertex { x: 0.25548, y: 0.247485 },
+            TVertex { x: 0.505437, y: 0.247882 },
+            TVertex { x: 0.505039, y: 0.497839 },
+            TVertex { x: 0.754598, y: 0.748193 },
+            TVertex { x: 0.504642, y: 0.747795 },
+            TVertex { x: 0.505834, y: -0.002074 },
+            TVertex { x: 0.75579, y: -0.001677 },
+            TVertex { x: 0.005127, y: 0.497044 },
+            TVertex { x: 0.005524, y: 0.247088 }
+          ],
+          normals : vec![],
+          geometry: vec![
+            Geometry {
+              material_name: None,
+              smooth_shading_group: 0,
+              shapes: vec![
+                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), vec!["face".into(), "one".into()]),
+                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), vec!["face".into(), "one".into()]),
+                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), vec!["face".into(), "two".into()]),
+                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), vec!["face".into(), "two".into()]),
+                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), vec!["face".into(), "three".into()]),
+                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), vec!["face".into(), "three".into()]),
+                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), vec!["face".into(), "four".into()]),
+                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), vec!["face".into(), "four".into()]),
+                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), vec!["face".into(), "five".into()]),
+                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), vec!["face".into(), "five".into()]),
+                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), vec!["face".into(), "six".into()]),
+                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), vec!["face".into(), "six".into()])
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+  assert_eq!(parse(input.into()), Ok(expected));
+}
+
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
 /// file, or an error. Support in this parser for the full file format is
 /// best-effort and realistically I will only end up supporting the subset
