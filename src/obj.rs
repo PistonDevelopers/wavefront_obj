@@ -57,16 +57,6 @@ pub struct Shape {
   groups: Vec<GroupName>
 }
 
-impl Shape {
-  #[allow(dead_code)] // used only in tests
-  fn new(primitive: Primitive, groups: Vec<GroupName>) -> Self {
-    Shape {
-      primitive: primitive,
-      groups: groups
-    }
-  }
-}
-
 /// Name of a group.
 type GroupName = String;
 
@@ -912,11 +902,14 @@ f 45 41 44 48
                      (4, 6, 5))
                 .into_iter()
                 .map(|(x, y, z)|
-                       Shape::new(Triangle(
-                         (x, None, None),
-                         (y, None, None),
-                         (z, None, None)),
-                         Vec::new()))
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (x, None, None),
+                        (y, None, None),
+                        (z, None, None)),
+                    groups: vec!(),
+                  })
                 .collect()
             }
           )
@@ -1002,10 +995,13 @@ f 45 41 44 48
                   (0, 31))
                 .into_iter()
                 .map(|(x, y)|
-                  Shape::new(Line(
-                    (x, None, None),
-                    (y, None, None)),
-                    Vec::new()))
+                  Shape {
+                    primitive:
+                      Line(
+                        (x, None, None),
+                        (y, None, None)),
+                    groups: vec!(),
+                  })
                 .collect(),
             }
           )
@@ -1047,11 +1043,14 @@ f 45 41 44 48
                   (7, 0, 3))
                 .into_iter()
                 .map(|(x, y, z)|
-                  Shape::new(Triangle(
-                    (x, None, None),
-                    (y, None, None),
-                    (z, None, None)),
-                    Vec::new()))
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (x, None, None),
+                        (y, None, None),
+                        (z, None, None)),
+                    groups: vec!(),
+                  })
                 .collect()
             }
           )
@@ -1167,11 +1166,14 @@ f 5/5 1/13 4/14 8/6
                   (7, 5, 0, 12, 3, 13))
                 .into_iter()
                 .map(|(vx, tx, vy, ty, vz, tz)|
-                   Shape::new(Triangle(
-                     (vx, Some(tx), None),
-                     (vy, Some(ty), None),
-                     (vz, Some(tz), None)),
-                     Vec::new()))
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (vx, Some(tx), None),
+                        (vy, Some(ty), None),
+                        (vz, Some(tz), None)),
+                    groups: vec!(),
+                  })
                 .collect(),
             }
           )
@@ -1417,11 +1419,14 @@ f 3//32 2//32 4//32
                 (3, 31, 2, 31, 1, 31))
               .into_iter()
               .map(|(vx, nx, vy, ny, vz, nz)|
-                 Shape::new(Triangle(
-                   (vx, None, Some(nx)),
-                   (vy, None, Some(ny)),
-                   (vz, None, Some(nz))),
-                   Vec::new()))
+                Shape {
+                  primitive:
+                    Triangle(
+                      (vx, None, Some(nx)),
+                      (vy, None, Some(ny)),
+                      (vz, None, Some(nz))),
+                  groups: vec!(),
+                })
               .collect(),
           }
         ]
@@ -1652,11 +1657,14 @@ f 21 33 12
                   (1, 30, 29))
                 .into_iter()
                 .map(|(x, y, z)|
-                  Shape::new(Triangle(
-                    (x, None, None),
-                    (y, None, None),
-                    (z, None, None)),
-                    Vec::new()))
+                  Shape {
+                   primitive:
+                     Triangle(
+                       (x, None, None),
+                       (y, None, None),
+                       (z, None, None)),
+                   groups: vec!(),
+                  })
                 .collect()
             },
             Geometry {
@@ -1672,11 +1680,14 @@ f 21 33 12
                   (11, 20, 32))
                 .into_iter()
                 .map(|(x, y, z)|
-                  Shape::new(Triangle(
-                    (x, None, None),
-                    (y, None, None),
-                    (z, None, None)),
-                    Vec::new()))
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (x, None, None),
+                        (y, None, None),
+                        (z, None, None)),
+                    groups: vec!(),
+                  })
                 .collect(),
             }
           ]
@@ -1789,11 +1800,14 @@ f 5/5 1/13 4/14 8/6
                   (7, 5, 0, 12, 3, 13))
                 .into_iter()
                 .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape::new(Triangle(
-                    (vx, Some(tx), None),
-                    (vy, Some(ty), None),
-                    (vz, Some(tz), None)),
-                    Vec::new()))
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (vx, Some(tx), None),
+                        (vy, Some(ty), None),
+                        (vz, Some(tz), None)),
+                    groups: vec!(),
+                  })
                 .collect(),
             }
           ]
@@ -1849,51 +1863,68 @@ f 5/5 1/13 4/14 8/6
       objects: vec![
         Object {
           name: "Cube".to_owned(),
-          vertices: vec![
-            Vertex { x:  1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z: -1.0 }
-          ],
-          tex_vertices: vec![
-            TVertex { x: 1.004952, y: 0.498633 },
-            TVertex { x: 0.754996, y: 0.498236 },
-            TVertex { x: 0.755393, y: 0.248279 },
-            TVertex { x: 1.005349, y: 0.248677 },
-            TVertex { x: 0.255083, y: 0.497442 },
-            TVertex { x: 0.25548, y: 0.247485 },
-            TVertex { x: 0.505437, y: 0.247882 },
-            TVertex { x: 0.505039, y: 0.497839 },
-            TVertex { x: 0.754598, y: 0.748193 },
-            TVertex { x: 0.504642, y: 0.747795 },
-            TVertex { x: 0.505834, y: -0.002074 },
-            TVertex { x: 0.75579, y: -0.001677 },
-            TVertex { x: 0.005127, y: 0.497044 },
-            TVertex { x: 0.005524, y: 0.247088 }
-          ],
+          vertices:
+            vec!(
+              ( 1.0, -1.0, -1.0),
+              ( 1.0, -1.0,  1.0),
+              (-1.0, -1.0,  1.0),
+              (-1.0, -1.0, -1.0),
+              ( 1.0,  1.0, -1.0),
+              ( 1.0,  1.0,  1.0),
+              (-1.0,  1.0,  1.0),
+              (-1.0,  1.0, -1.0))
+            .into_iter()
+            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+            .collect(),
+          tex_vertices:
+            vec!(
+              (1.004952, 0.498633),
+              (0.754996, 0.498236),
+              (0.755393, 0.248279),
+              (1.005349, 0.248677),
+              (0.255083, 0.497442),
+              (0.25548, 0.247485),
+              (0.505437, 0.247882),
+              (0.505039, 0.497839),
+              (0.754598, 0.748193),
+              (0.504642, 0.747795),
+              (0.505834, -0.002074),
+              (0.75579, -0.001677),
+              (0.005127, 0.497044),
+              (0.005524, 0.247088))
+            .into_iter()
+            .map(|(x, y)| TVertex { x: x, y: y })
+            .collect(),
           normals : vec![],
           geometry: vec![
             Geometry {
               material_name: None,
               smooth_shading_group: 0,
-              shapes: vec![
-                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), vec!["all".into()]),
-                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), vec!["all".into()]),
-                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), vec!["all".into()]),
-                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), vec!["all".into()]),
-                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), vec!["all".into()]),
-                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), vec!["all".into()]),
-                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), vec!["all".into()]),
-                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), vec!["all".into()]),
-                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), vec!["all".into()]),
-                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), vec!["all".into()]),
-                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), vec!["all".into()]),
-                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), vec!["all".into()])
-              ]
+              shapes:
+                vec!(
+                  (3,  3, 0,  0, 1,  1, "all"),
+                  (3,  3, 1,  1, 2,  2, "all"),
+                  (5,  7, 4,  4, 7,  5, "all"),
+                  (5,  7, 7,  5, 6,  6, "all"),
+                  (1,  1, 0,  8, 4,  9, "all"),
+                  (1,  1, 4,  9, 5,  7, "all"),
+                  (2,  2, 1,  1, 5,  7, "all"),
+                  (2,  2, 5,  7, 6,  6, "all"),
+                  (3, 11, 2,  2, 6,  6, "all"),
+                  (3, 11, 6,  6, 7, 10, "all"),
+                  (7,  5, 4,  4, 0, 12, "all"),
+                  (7,  5, 0, 12, 3, 13, "all"))
+                .into_iter()
+                .map(|(xv, xt, yv, yt, zv, zt, group)|
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (xv, Some(xt), None),
+                        (yv, Some(yt), None),
+                        (zv, Some(zt), None)),
+                    groups: vec!(group.into()),
+                  })
+                .collect(),
             }
           ]
         }
@@ -1984,20 +2015,32 @@ f 5/5 1/13 4/14 8/6
             Geometry {
               material_name: None,
               smooth_shading_group: 0,
-              shapes: vec![
-                Shape::new(Triangle((3, Some(3), None),  (0, Some(0), None), (1, Some(1), None)), vec!["face".into(), "one".into()]),
-                Shape::new(Triangle((3, Some(3), None),  (1, Some(1), None), (2, Some(2), None)), vec!["face".into(), "one".into()]),
-                Shape::new(Triangle((5, Some(7), None),  (4, Some(4), None), (7, Some(5), None)), vec!["face".into(), "two".into()]),
-                Shape::new(Triangle((5, Some(7), None),  (7, Some(5), None), (6, Some(6), None)), vec!["face".into(), "two".into()]),
-                Shape::new(Triangle((1, Some(1), None),  (0, Some(8), None), (4, Some(9), None)), vec!["face".into(), "three".into()]),
-                Shape::new(Triangle((1, Some(1), None),  (4, Some(9), None), (5, Some(7), None)), vec!["face".into(), "three".into()]),
-                Shape::new(Triangle((2, Some(2), None),  (1, Some(1), None), (5, Some(7), None)), vec!["face".into(), "four".into()]),
-                Shape::new(Triangle((2, Some(2), None),  (5, Some(7), None), (6, Some(6), None)), vec!["face".into(), "four".into()]),
-                Shape::new(Triangle((3, Some(11), None), (2, Some(2), None), (6, Some(6), None)), vec!["face".into(), "five".into()]),
-                Shape::new(Triangle((3, Some(11), None), (6, Some(6), None), (7, Some(10), None)), vec!["face".into(), "five".into()]),
-                Shape::new(Triangle((7, Some(5), None),  (4, Some(4), None), (0, Some(12), None)), vec!["face".into(), "six".into()]),
-                Shape::new(Triangle((7, Some(5), None),  (0, Some(12), None), (3, Some(13), None)), vec!["face".into(), "six".into()])
-              ]
+              shapes:
+                vec!(
+                  (3, 3, 0, 0, 1, 1, vec!("face", "one")),
+                  (3, 3, 1, 1, 2, 2, vec!("face", "one")),
+                  (5, 7, 4, 4, 7, 5, vec!("face", "two")),
+                  (5, 7, 7, 5, 6, 6, vec!("face", "two")),
+                  (1, 1, 0, 8, 4, 9, vec!("face", "three")),
+                  (1, 1, 4, 9, 5, 7, vec!("face", "three")),
+                  (2, 2, 1, 1, 5, 7, vec!("face", "four")),
+                  (2, 2, 5, 7, 6, 6, vec!("face", "four")),
+                  (3, 11, 2, 2, 6, 6, vec!("face", "five")),
+                  (3, 11, 6, 6, 7, 10, vec!("face", "five")),
+                  (7, 5, 4, 4, 0, 12, vec!("face", "six")),
+                  (7, 5, 0, 12, 3, 13, vec!("face", "six"))
+                )
+                .into_iter()
+                .map(|(vx, tx, vy, ty, vz, tz, groups)|
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (vx, Some(tx), None),
+                        (vy, Some(ty), None),
+                        (vz, Some(tz), None)),
+                    groups: groups.into_iter().map(|s| s.into()).collect(),
+                  })
+                .collect(),
             }
           ]
         }
