@@ -384,7 +384,9 @@ impl<'a> Parser<'a> {
   fn parse_object_name(&mut self) -> Result<Option<String>, ParseError> {
     if let Some("o") = sliced(&self.peek()) {
       try!(self.parse_tag("o"));
-      self.parse_str().map(Some)
+      let name = self.parse_str().map(Some);
+      try!(self.one_or_more_newlines());
+      name
     } else {
       Ok(None)
     }
@@ -691,6 +693,8 @@ impl<'a> Parser<'a> {
         },
         None => break
       }
+
+      self.zero_or_more_newlines();
     }
 
     Ok(result)
