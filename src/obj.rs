@@ -259,6 +259,7 @@ fn test_to_triangles() {
     ));
 }
 
+#[derive(Clone)]
 struct Parser<'a> {
   line_number: usize,
   lexer: iter::Peekable<Lexer<'a>>,

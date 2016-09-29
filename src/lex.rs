@@ -15,6 +15,7 @@ fn is_whitespace(c: u8) -> bool {
   c == b' ' || c == b'\t' || c == b'\n'
 }
 
+#[derive(Clone)]
 pub struct Lexer<'a> {
   bytes: iter::Peekable<str::Bytes<'a>>,
   current_line_number: usize,
