@@ -89,12 +89,13 @@ pub struct Vertex {
 /// A single 3-dimensional normal
 pub type Normal = Vertex;
 
-/// A single 2-dimensional point on a texture. "Texure Vertex".
+/// A single 3-dimensional point on a texture. "Texure Vertex".
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
 pub struct TVertex {
-  pub x: f64,
-  pub y: f64,
+  pub u: f64,
+  pub v: f64,
+  pub w: f64
 }
 
 fn fuzzy_cmp(a: f64, b: f64, delta: f64) -> Ordering {
@@ -130,8 +131,9 @@ impl PartialEq for TVertex {
 
 impl PartialOrd for TVertex {
   fn partial_cmp(&self, other: &TVertex) -> Option<Ordering> {
-    Some(fuzzy_cmp(self.x, other.x, 0.00001)
-      .lexico(|| fuzzy_cmp(self.y, other.y, 0.00001)))
+    Some(fuzzy_cmp(self.u, other.u, 0.00001)
+      .lexico(|| fuzzy_cmp(self.v, other.v, 0.00001))
+      .lexico(|| fuzzy_cmp(self.w, other.w, 0.00001)))
   }
 }
 
@@ -307,6 +309,21 @@ impl<'a> Parser<'a> {
     self.lexer.peek().map(|s| s.clone())
   }
 
+  /// Take a parser function and try to parse with it. If the parser fails, `None` is returned and
+  /// no input is consumed. If the parser succeeds, the input is consumed and the parser result
+  /// is returned.
+  fn try<P, T>(&mut self, parse: P) -> Option<T> where P: FnOnce(&mut Self) -> Result<T, ParseError> {
+    let mut tried = self.clone();
+
+    match parse(&mut tried) {
+      Ok(r) => {
+        *self = tried;
+        Some(r)
+      },
+      Err(_) => None
+    }
+  }
+
   /// Possibly skips over some newlines.
   fn zero_or_more_newlines(&mut self) {
     loop {
@@ -387,6 +404,8 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
+    try!(self.parse_tag("v"));
+
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
     let z = try!(self.parse_double());
@@ -395,13 +414,21 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
-    let x = try!(self.parse_double());
-    let y = try!(self.parse_double());
+    try!(self.parse_tag("vt"));
+    let u = try!(self.parse_double());
 
-    Ok(TVertex { x: x, y: y })
+    match self.try(Self::parse_double) {
+      Some(v) => {
+        let w = self.try(Self::parse_double).unwrap_or(0.);
+        Ok(TVertex { u: u, v: v, w: w })
+      },
+      None => Ok(TVertex { u: u, v: 0., w: 0. })
+    }
   }
 
   fn parse_normal(&mut self) -> Result<Normal, ParseError> {
+    try!(self.parse_tag("vn"));
+
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
     let z = try!(self.parse_double());
@@ -606,25 +633,14 @@ impl<'a> Parser<'a> {
 
     // read vertices, nomals and texture coordinates
     loop {
-      match sliced(&self.peek()) {
-        Some("v") => {
-          self.advance();
-          let v = try!(self.parse_vertex());
-          vertices.push(v);
-        },
-        Some("vn") => {
-          self.advance();
-          let n = try!(self.parse_normal());
-          normals.push(n);
-        },
-        Some("vt") => {
-          self.advance();
-          let t = try!(self.parse_tex_vertex());
-          tex_vertices.push(t);
-        },
-        _ => {
-          break;
-        }
+      if let Some(v) = self.try(Self::parse_vertex) {
+        vertices.push(v);
+      } else if let Some(vn) = self.try(Self::parse_normal) {
+        normals.push(vn);
+      } else if let Some(vt) = self.try(Self::parse_tex_vertex) {
+        tex_vertices.push(vt);
+      } else {
+        break;
       }
 
       try!(self.one_or_more_newlines());
@@ -1133,7 +1149,7 @@ f 5/5 1/13 4/14 8/6
               (0.005127, 0.497044),
               (0.005524, 0.247088))
             .into_iter()
-            .map(|(x, y)| TVertex { x: x, y: y })
+            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
             .collect(),
           normals : vec!(),
           geometry: vec!(
@@ -1767,7 +1783,7 @@ f 5/5 1/13 4/14 8/6
               (0.005127, 0.497044),
               (0.005524, 0.247088))
             .into_iter()
-            .map(|(x, y)| TVertex { x: x, y: y })
+            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
             .collect(),
           normals : vec![],
           geometry: vec![
@@ -1883,7 +1899,7 @@ f 5/5 1/13 4/14 8/6
               (0.005127, 0.497044),
               (0.005524, 0.247088))
             .into_iter()
-            .map(|(x, y)| TVertex { x: x, y: y })
+            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
             .collect(),
           normals : vec![],
           geometry: vec![
@@ -1985,20 +2001,20 @@ f 5/5 1/13 4/14 8/6
             Vertex { x: -1.0, y:  1.0, z: -1.0 }
           ],
           tex_vertices: vec![
-            TVertex { x: 1.004952, y: 0.498633 },
-            TVertex { x: 0.754996, y: 0.498236 },
-            TVertex { x: 0.755393, y: 0.248279 },
-            TVertex { x: 1.005349, y: 0.248677 },
-            TVertex { x: 0.255083, y: 0.497442 },
-            TVertex { x: 0.25548, y: 0.247485 },
-            TVertex { x: 0.505437, y: 0.247882 },
-            TVertex { x: 0.505039, y: 0.497839 },
-            TVertex { x: 0.754598, y: 0.748193 },
-            TVertex { x: 0.504642, y: 0.747795 },
-            TVertex { x: 0.505834, y: -0.002074 },
-            TVertex { x: 0.75579, y: -0.001677 },
-            TVertex { x: 0.005127, y: 0.497044 },
-            TVertex { x: 0.005524, y: 0.247088 }
+            TVertex { u: 1.004952, v: 0.498633, w: 0. },
+            TVertex { u: 0.754996, v: 0.498236, w: 0. },
+            TVertex { u: 0.755393, v: 0.248279, w: 0. },
+            TVertex { u: 1.005349, v: 0.248677, w: 0. },
+            TVertex { u: 0.255083, v: 0.497442, w: 0. },
+            TVertex { u: 0.25548, v: 0.247485, w: 0. },
+            TVertex { u: 0.505437, v: 0.247882, w: 0. },
+            TVertex { u: 0.505039, v: 0.497839, w: 0. },
+            TVertex { u: 0.754598, v: 0.748193, w: 0. },
+            TVertex { u: 0.504642, v: 0.747795, w: 0. },
+            TVertex { u: 0.505834, v: -0.002074, w: 0. },
+            TVertex { u: 0.75579, v: -0.001677, w: 0. },
+            TVertex { u: 0.005127, v: 0.497044, w: 0. },
+            TVertex { u: 0.005524, v: 0.247088, w: 0. }
           ],
           normals : vec![],
           geometry: vec![
