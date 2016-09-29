@@ -364,8 +364,14 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_object_name(&mut self) -> Result<String, ParseError> {
-    try!(self.parse_tag("o"));
-    self.parse_str()
+    if let Some("o") = sliced(&self.peek()) {
+      try!(self.parse_tag("o"));
+      let name = self.parse_str();
+      try!(self.one_or_more_newlines());
+      name
+    } else {
+      Ok("".to_owned())
+    }
   }
 
   // TODO(cgaebel): Should this be returning `num::rational::BigRational` instead?
@@ -657,8 +663,8 @@ impl<'a> Parser<'a> {
       max_normal_index: &mut usize
       ) -> Result<Object, ParseError> {
     let name = try!(self.parse_object_name());
-    try!(self.one_or_more_newlines());
 
+    // FIXME: this is all wrong, we shouldn’t require a order of parsing here
     let vertices     = try!(self.parse_vertices());
     let tex_vertices = try!(self.parse_tex_vertices());
     let normals      = try!(self.parse_normals());
@@ -678,11 +684,11 @@ impl<'a> Parser<'a> {
     *min_normal_index += normals.len();
 
     Ok(Object {
-      name:          name,
-      vertices:     vertices,
+      name: name,
+      vertices: vertices,
       tex_vertices: tex_vertices,
-      normals:      normals,
-      geometry:      geometry,
+      normals: normals,
+      geometry: geometry,
     })
   }
 
@@ -698,14 +704,29 @@ impl<'a> Parser<'a> {
 
     loop {
       match sliced(&self.peek()) {
-        Some("o") => result.push(try!(self.parse_object(
-                      &mut min_vertex_index,
-                      &mut max_vertex_index,
-                      &mut min_tex_index,
-                      &mut max_tex_index,
-                      &mut min_normal_index,
-                      &mut max_normal_index))),
-        _         => break,
+        Some("o") => {
+          result.push(try!(self.parse_object(&mut min_vertex_index,
+                                             &mut max_vertex_index,
+                                             &mut min_tex_index,
+                                             &mut max_tex_index,
+                                             &mut min_normal_index,
+                                             &mut max_normal_index)));
+        },
+        _ => {
+          // If we haven’t found any objects yet, if we don’t match the 'o' token, that means we’re
+          // using an anonymous object as the 'o' is an optional statement. So allocate and parse an
+          // object anyway.
+          if result.is_empty() {
+            result.push(try!(self.parse_object(&mut min_vertex_index,
+                                               &mut max_vertex_index,
+                                               &mut min_tex_index,
+                                               &mut max_tex_index,
+                                               &mut min_normal_index,
+                                               &mut max_normal_index)));
+          } else {
+            break;
+          }
+        }
       }
     }
 
