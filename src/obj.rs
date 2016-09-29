@@ -631,7 +631,7 @@ impl<'a> Parser<'a> {
     let mut normals = Vec::new();
     let mut tex_vertices = Vec::new();
 
-    // read vertices, nomals and texture coordinates
+    // read vertices, normals and texture coordinates
     loop {
       if let Some(v) = self.try(Self::parse_vertex) {
         vertices.push(v);
