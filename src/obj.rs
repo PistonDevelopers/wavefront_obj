@@ -363,14 +363,12 @@ impl<'a> Parser<'a> {
     self.parse_str().map(Some)
   }
 
-  fn parse_object_name(&mut self) -> Result<String, ParseError> {
+  fn parse_object_name(&mut self) -> Result<Option<String>, ParseError> {
     if let Some("o") = sliced(&self.peek()) {
       try!(self.parse_tag("o"));
-      let name = self.parse_str();
-      try!(self.one_or_more_newlines());
-      name
+      self.parse_str().map(Some)
     } else {
-      Ok("".to_owned())
+      Ok(None)
     }
   }
 
@@ -388,8 +386,6 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
-    try!(self.parse_tag("v"));
-
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
     let z = try!(self.parse_double());
@@ -397,80 +393,19 @@ impl<'a> Parser<'a> {
     Ok(Vertex { x: x, y: y, z: z })
   }
 
-  /// BUG: Also munches trailing whitespace.
-  fn parse_vertices(&mut self) -> Result<Vec<Vertex>, ParseError> {
-    let mut result = Vec::new();
-
-    loop {
-      match sliced(&self.peek()) {
-        Some("v") => {
-          let v = try!(self.parse_vertex());
-          result.push(v);
-        },
-        _ => break,
-      }
-
-      try!(self.one_or_more_newlines());
-    }
-
-    Ok(result)
-  }
-
   fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
-    try!(self.parse_tag("vt"));
-
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
 
     Ok(TVertex { x: x, y: y })
   }
 
-  /// BUG: Also munches trailing whitespace.
-  fn parse_tex_vertices(&mut self) -> Result<Vec<TVertex>, ParseError> {
-    let mut result = Vec::new();
-
-    loop {
-      match sliced(&self.peek()) {
-        Some("vt") => {
-          let v = try!(self.parse_tex_vertex());
-          result.push(v);
-        },
-        _ => break,
-      }
-
-      try!(self.one_or_more_newlines());
-    }
-
-    Ok(result)
-  }
-
   fn parse_normal(&mut self) -> Result<Normal, ParseError> {
-    try!(self.parse_tag("vn"));
-
     let x = try!(self.parse_double());
     let y = try!(self.parse_double());
     let z = try!(self.parse_double());
 
     Ok(Normal { x: x, y: y, z: z })
-  }
-
-  /// BUG: Also munches trailing whitespace.
-  fn parse_normals(&mut self) -> Result<Vec<Vertex>, ParseError> {
-    let mut result = Vec::new();
-
-    loop {
-      match sliced(&self.peek()) {
-        Some("vn") => {
-          let vn = try!(self.parse_normal());
-          result.push(vn);
-        },
-        _ => break,
-      }
-
-      try!(self.one_or_more_newlines());
-    }
-
-    Ok(result)
   }
 
   fn parse_usemtl(&mut self) -> Result<String, ParseError> {
@@ -662,12 +597,37 @@ impl<'a> Parser<'a> {
       min_normal_index: &mut usize,
       max_normal_index: &mut usize
       ) -> Result<Object, ParseError> {
-    let name = try!(self.parse_object_name());
+    let name = try!(self.parse_object_name()).unwrap_or(String::new());
 
-    // FIXME: this is all wrong, we shouldn’t require an order of parsing here
-    let vertices     = try!(self.parse_vertices());
-    let tex_vertices = try!(self.parse_tex_vertices());
-    let normals      = try!(self.parse_normals());
+    let mut vertices = Vec::new();
+    let mut normals = Vec::new();
+    let mut tex_vertices = Vec::new();
+
+    // read vertices, nomals and texture coordinates
+    loop {
+      match sliced(&self.peek()) {
+        Some("v") => {
+          self.advance();
+          let v = try!(self.parse_vertex());
+          vertices.push(v);
+        },
+        Some("vn") => {
+          self.advance();
+          let n = try!(self.parse_normal());
+          normals.push(n);
+        },
+        Some("vt") => {
+          self.advance();
+          let t = try!(self.parse_tex_vertex());
+          tex_vertices.push(t);
+        },
+        _ => {
+          break;
+        }
+      }
+
+      try!(self.one_or_more_newlines());
+    }
 
     *max_vertex_index += vertices.len();
     *max_tex_index    += tex_vertices.len();
