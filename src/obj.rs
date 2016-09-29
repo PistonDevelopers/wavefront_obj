@@ -681,7 +681,7 @@ impl<'a> Parser<'a> {
 
     loop {
       match sliced(&self.peek()) {
-        Some("o") => {
+        Some(_) => {
           result.push(try!(self.parse_object(&mut min_vertex_index,
                                              &mut max_vertex_index,
                                              &mut min_tex_index,
@@ -689,21 +689,7 @@ impl<'a> Parser<'a> {
                                              &mut min_normal_index,
                                              &mut max_normal_index)));
         },
-        _ => {
-          // If we haven’t found any objects yet, if we don’t match the 'o' token, that means we’re
-          // using an anonymous object as the 'o' is an optional statement. So allocate and parse an
-          // object anyway.
-          if result.is_empty() {
-            result.push(try!(self.parse_object(&mut min_vertex_index,
-                                               &mut max_vertex_index,
-                                               &mut min_tex_index,
-                                               &mut max_tex_index,
-                                               &mut min_normal_index,
-                                               &mut max_normal_index)));
-          } else {
-            break;
-          }
-        }
+        None => break
       }
     }
 
