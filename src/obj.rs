@@ -664,7 +664,7 @@ impl<'a> Parser<'a> {
       ) -> Result<Object, ParseError> {
     let name = try!(self.parse_object_name());
 
-    // FIXME: this is all wrong, we shouldn’t require a order of parsing here
+    // FIXME: this is all wrong, we shouldn’t require an order of parsing here
     let vertices     = try!(self.parse_vertices());
     let tex_vertices = try!(self.parse_tex_vertices());
     let normals      = try!(self.parse_normals());
