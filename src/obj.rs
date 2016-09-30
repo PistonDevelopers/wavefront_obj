@@ -1302,8 +1302,251 @@ f 5/5 1/13 4/14 8/6
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
+#[test]
+fn test_cube_tex_vert_missing_vw() {
+  use self::Primitive::{ Triangle };
 
+  let test_case =
+r#"
+# Blender v2.71 (sub 0) OBJ File: 'cube.blend'
+# www.blender.org
+mtllib cube.mtl
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952
+vt 0.754996
+vt 0.755393
+vt 1.005349
+vt 0.255083
+vt 0.255480
+vt 0.505437
+vt 0.505039
+vt 0.754598
+vt 0.504642
+vt 0.505834
+vt 0.755790
+vt 0.005127
+vt 0.005524
+usemtl Material
+s off
+f 1/1 2/2 3/3 4/4
+f 5/5 8/6 7/7 6/8
+f 1/9 5/10 6/8 2/2
+f 2/2 6/8 7/7 3/3
+f 3/3 7/7 8/11 4/12
+f 5/5 1/13 4/14 8/6
+"#;
 
+  let expected =
+    Ok(ObjSet {
+      material_library: Some("cube.mtl".to_owned()),
+      objects: vec![
+        Object {
+          name: "Cube".to_owned(),
+          vertices:
+            vec!(
+              ( 1.0, -1.0, -1.0),
+              ( 1.0, -1.0,  1.0),
+              (-1.0, -1.0,  1.0),
+              (-1.0, -1.0, -1.0),
+              ( 1.0,  1.0, -1.0),
+              ( 1.0,  1.0,  1.0),
+              (-1.0,  1.0,  1.0),
+              (-1.0,  1.0, -1.0))
+            .into_iter()
+            .map(|(x, y, z)|
+              Vertex {
+                x: x as f64,
+                y: y as f64,
+                z: z as f64 })
+            .collect(),
+          tex_vertices:
+            vec!(
+              1.004952,
+              0.754996,
+              0.755393,
+              1.005349,
+              0.255083,
+              0.25548,
+              0.505437,
+              0.505039,
+              0.754598,
+              0.504642,
+              0.505834,
+              0.75579,
+              0.005127,
+              0.005524)
+            .into_iter()
+            .map(|u| TVertex { u: u, v: 0., w: 0. })
+            .collect(),
+          normals : vec!(),
+          geometry: vec!(
+            Geometry {
+              material_name: Some("Material".to_owned()),
+              smooth_shading_group: 0,
+              shapes:
+                vec!(
+                  (3, 3, 0, 0, 1, 1),
+                  (3, 3, 1, 1, 2, 2),
+                  (5, 7, 4, 4, 7, 5),
+                  (5, 7, 7, 5, 6, 6),
+                  (1, 1, 0, 8, 4, 9),
+                  (1, 1, 4, 9, 5, 7),
+                  (2, 2, 1, 1, 5, 7),
+                  (2, 2, 5, 7, 6, 6),
+                  (3, 11, 2, 2, 6, 6),
+                  (3, 11, 6, 6, 7, 10),
+                  (7, 5, 4, 4, 0, 12),
+                  (7, 5, 0, 12, 3, 13))
+                .into_iter()
+                .map(|(vx, tx, vy, ty, vz, tz)|
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (vx, Some(tx), None),
+                        (vy, Some(ty), None),
+                        (vz, Some(tz), None)),
+                    groups: vec!(),
+                  })
+                .collect(),
+            }
+          )
+        }
+      ]
+    });
+
+  assert_eq!(parse(test_case.to_owned()), expected);
+}
+
+#[test]
+fn test_cube_3d_tex_vert() {
+  use self::Primitive::{ Triangle };
+
+  let test_case =
+r#"
+# Blender v2.71 (sub 0) OBJ File: 'cube.blend'
+# www.blender.org
+mtllib cube.mtl
+o Cube
+v 1.000000 -1.000000 -1.000000
+v 1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 1.000000
+v -1.000000 -1.000000 -1.000000
+v 1.000000 1.000000 -0.999999
+v 0.999999 1.000000 1.000001
+v -1.000000 1.000000 1.000000
+v -1.000000 1.000000 -1.000000
+vt 1.004952 0.498633 1.0
+vt 0.754996 0.498236 1.0
+vt 0.755393 0.248279 1.0
+vt 1.005349 0.248677 1.0
+vt 0.255083 0.497442 1.0
+vt 0.255480 0.247485 1.0
+vt 0.505437 0.247882 1.0
+vt 0.505039 0.497839 1.0
+vt 0.754598 0.748193 1.0
+vt 0.504642 0.747795 1.0
+vt 0.505834 -0.002074 1.0
+vt 0.755790 -0.001677 1.0
+vt 0.005127 0.497044 1.0
+vt 0.005524 0.247088 1.0
+usemtl Material
+s off
+f 1/1 2/2 3/3 4/4
+f 5/5 8/6 7/7 6/8
+f 1/9 5/10 6/8 2/2
+f 2/2 6/8 7/7 3/3
+f 3/3 7/7 8/11 4/12
+f 5/5 1/13 4/14 8/6
+"#;
+
+  let expected =
+    Ok(ObjSet {
+      material_library: Some("cube.mtl".to_owned()),
+      objects: vec![
+        Object {
+          name: "Cube".to_owned(),
+          vertices:
+            vec!(
+              ( 1.0, -1.0, -1.0),
+              ( 1.0, -1.0,  1.0),
+              (-1.0, -1.0,  1.0),
+              (-1.0, -1.0, -1.0),
+              ( 1.0,  1.0, -1.0),
+              ( 1.0,  1.0,  1.0),
+              (-1.0,  1.0,  1.0),
+              (-1.0,  1.0, -1.0))
+            .into_iter()
+            .map(|(x, y, z)|
+              Vertex {
+                x: x as f64,
+                y: y as f64,
+                z: z as f64 })
+            .collect(),
+          tex_vertices:
+            vec!(
+              (1.004952, 0.498633),
+              (0.754996, 0.498236),
+              (0.755393, 0.248279),
+              (1.005349, 0.248677),
+              (0.255083, 0.497442),
+              (0.25548, 0.247485),
+              (0.505437, 0.247882),
+              (0.505039, 0.497839),
+              (0.754598, 0.748193),
+              (0.504642, 0.747795),
+              (0.505834, -0.002074),
+              (0.75579, -0.001677),
+              (0.005127, 0.497044),
+              (0.005524, 0.247088))
+            .into_iter()
+            .map(|(u, v)| TVertex { u: u, v: v, w: 1. })
+            .collect(),
+          normals : vec!(),
+          geometry: vec!(
+            Geometry {
+              material_name: Some("Material".to_owned()),
+              smooth_shading_group: 0,
+              shapes:
+                vec!(
+                  (3, 3, 0, 0, 1, 1),
+                  (3, 3, 1, 1, 2, 2),
+                  (5, 7, 4, 4, 7, 5),
+                  (5, 7, 7, 5, 6, 6),
+                  (1, 1, 0, 8, 4, 9),
+                  (1, 1, 4, 9, 5, 7),
+                  (2, 2, 1, 1, 5, 7),
+                  (2, 2, 5, 7, 6, 6),
+                  (3, 11, 2, 2, 6, 6),
+                  (3, 11, 6, 6, 7, 10),
+                  (7, 5, 4, 4, 0, 12),
+                  (7, 5, 0, 12, 3, 13))
+                .into_iter()
+                .map(|(vx, tx, vy, ty, vz, tz)|
+                  Shape {
+                    primitive:
+                      Triangle(
+                        (vx, Some(tx), None),
+                        (vy, Some(ty), None),
+                        (vz, Some(tz), None)),
+                    groups: vec!(),
+                  })
+                .collect(),
+            }
+          )
+        }
+      ]
+    });
+
+  assert_eq!(parse(test_case.to_owned()), expected);
+}
 
 #[test]
 fn test_normals_no_tex() {
