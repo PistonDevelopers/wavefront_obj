@@ -688,12 +688,13 @@ impl<'a> Parser<'a> {
     loop {
       match sliced(&self.peek()) {
         Some(_) => {
-          result.push(try!(self.parse_object(&mut min_vertex_index,
-                                             &mut max_vertex_index,
-                                             &mut min_tex_index,
-                                             &mut max_tex_index,
-                                             &mut min_normal_index,
-                                             &mut max_normal_index)));
+          result.push(try!(self.parse_object(
+            &mut min_vertex_index,
+            &mut max_vertex_index,
+            &mut min_tex_index,
+            &mut max_tex_index,
+            &mut min_normal_index,
+            &mut max_normal_index)));
         },
         None => break
       }
