@@ -312,6 +312,9 @@ impl<'a> Parser<'a> {
   /// Take a parser function and try to parse with it. If the parser fails, `None` is returned and
   /// no input is consumed. If the parser succeeds, the input is consumed and the parser result
   /// is returned.
+  ///
+  /// Be careful while using this function, especially in recursive parsing as it might end up with
+  /// non-linear parsing.
   fn try<P, T>(&mut self, parse: P) -> Option<T> where P: FnOnce(&mut Self) -> Result<T, ParseError> {
     let mut tried = self.clone();
 
@@ -381,14 +384,15 @@ impl<'a> Parser<'a> {
     self.parse_str().map(Some)
   }
 
-  fn parse_object_name(&mut self) -> Result<Option<String>, ParseError> {
-    if let Some("o") = sliced(&self.peek()) {
-      try!(self.parse_tag("o"));
-      let name = self.parse_str().map(Some);
-      try!(self.one_or_more_newlines());
-      name
-    } else {
-      Ok(None)
+  fn parse_object_name(&mut self) -> Result<String, ParseError> {
+    match sliced(&self.peek()) {
+      Some("o") => {
+        try!(self.parse_tag("o"));
+        let name = self.parse_str();
+        try!(self.one_or_more_newlines());
+        name
+      },
+      _ => Ok(String::new())
     }
   }
 
@@ -627,7 +631,7 @@ impl<'a> Parser<'a> {
       min_normal_index: &mut usize,
       max_normal_index: &mut usize
       ) -> Result<Object, ParseError> {
-    let name = try!(self.parse_object_name()).unwrap_or(String::new());
+    let name = try!(self.parse_object_name());
 
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
