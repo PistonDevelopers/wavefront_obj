@@ -20,7 +20,7 @@ pub struct ObjSet {
 /// A mesh object.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Object {
-  /// A human-readable name for this object. This can be set in blender.
+  /// A human-readable name for this object.
   pub name: String,
   /// The set of vertices this object is composed of. These are referenced
   /// by index in `shapes` contained within each element of `geometry`.
