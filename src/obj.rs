@@ -895,7 +895,6 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: Some("None".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!((0, 4, 5),
                      (0, 5, 1),
@@ -918,6 +917,7 @@ f 45 41 44 48
                         (y, None, None),
                         (z, None, None)),
                     groups: vec!(),
+                    smoothing_groups: vec!(),
                   })
                 .collect()
             }
@@ -967,7 +967,6 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: None,
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (1, 0),
@@ -1010,6 +1009,7 @@ f 45 41 44 48
                         (x, None, None),
                         (y, None, None)),
                     groups: vec!(),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
@@ -1035,7 +1035,6 @@ f 45 41 44 48
           geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 0, 1),
@@ -1059,6 +1058,7 @@ f 45 41 44 48
                         (y, None, None),
                         (z, None, None)),
                     groups: vec!(),
+                    smoothing_groups: vec!()
                   })
                 .collect()
             }
@@ -1158,7 +1158,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1),
@@ -1182,6 +1181,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: vec!(),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
@@ -1280,7 +1280,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1),
@@ -1304,6 +1303,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: vec!(),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
@@ -1403,7 +1403,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1),
@@ -1427,6 +1426,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: vec!(),
+                    smoothing_groups: vec!(),
                   })
                 .collect(),
             }
@@ -1526,7 +1526,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec!(
             Geometry {
               material_name: Some("Material".to_owned()),
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1),
@@ -1550,6 +1549,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: vec!(),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
@@ -1759,7 +1759,6 @@ f 3//32 2//32 4//32
         geometry: vec![
           Geometry {
             material_name: Some("Material.002".to_owned()),
-            smooth_shading_group: 0,
             shapes:
               vec!(
                 (32, 0, 31, 0, 1, 0),
@@ -1803,6 +1802,7 @@ f 3//32 2//32 4//32
                       (vy, None, Some(ny)),
                       (vz, None, Some(nz))),
                   groups: vec!(),
+                  smoothing_groups: vec!()
                 })
               .collect(),
           }
@@ -1815,7 +1815,7 @@ f 3//32 2//32 4//32
 
 
 #[test]
-fn test_smooth_shading_groups() {
+fn test_smoothing_groups() {
   use self::Primitive::{ Triangle };
 
   let test_case =
@@ -1973,67 +1973,72 @@ f 21 33 12
           geometry: vec![
             Geometry {
               material_name: Some("None".to_owned()),
-              smooth_shading_group: 1,
               shapes:
                 vec!(
-                  (6, 3, 2),
-                  (5, 2, 1),
-                  (5, 0, 4),
-                  (11, 6, 10),
-                  (10, 5, 9),
-                  (9, 4, 8),
-                  (16, 10, 15),
-                  (14, 10, 9),
-                  (13, 9, 8),
-                  (20, 15, 19),
-                  (19, 14, 18),
-                  (18, 13, 17),
-                  (24, 19, 23),
-                  (22, 19, 18),
-                  (22, 17, 21),
-                  (28, 23, 27),
-                  (26, 23, 22),
-                  (25, 22, 21),
-                  (32, 27, 31),
-                  (30, 27, 26),
-                  (29, 26, 25),
-                  (4, 0, 12),
-                  (8, 4, 12),
-                  (13, 8, 12),
-                  (17, 13, 12),
-                  (21, 17, 12),
-                  (25, 21, 12),
-                  (29, 25, 12),
-                  (3, 31, 2),
-                  (2, 30, 1),
-                  (1, 29, 0),
-                  (0, 29, 12),
-                  (6, 7, 3),
-                  (5, 6, 2),
-                  (5, 1, 0),
-                  (11, 7, 6),
-                  (10, 6, 5),
-                  (9, 5, 4),
-                  (16, 11, 10),
-                  (14, 15, 10),
-                  (13, 14, 9),
-                  (20, 16, 15),
-                  (19, 15, 14),
-                  (18, 14, 13),
-                  (24, 20, 19),
-                  (22, 23, 19),
-                  (22, 18, 17),
-                  (28, 24, 23),
-                  (26, 27, 23),
-                  (25, 26, 22),
-                  (32, 28, 27),
-                  (30, 31, 27),
-                  (29, 30, 26),
-                  (3, 32, 31),
-                  (2, 31, 30),
-                  (1, 30, 29))
+                  (6, 3, 2, 1),
+                  (5, 2, 1, 1),
+                  (5, 0, 4, 1),
+                  (11, 6, 10, 1),
+                  (10, 5, 9, 1),
+                  (9, 4, 8, 1),
+                  (16, 10, 15, 1),
+                  (14, 10, 9, 1),
+                  (13, 9, 8, 1),
+                  (20, 15, 19, 1),
+                  (19, 14, 18, 1),
+                  (18, 13, 17, 1),
+                  (24, 19, 23, 1),
+                  (22, 19, 18, 1),
+                  (22, 17, 21, 1),
+                  (28, 23, 27, 1),
+                  (26, 23, 22, 1),
+                  (25, 22, 21, 1),
+                  (32, 27, 31, 1),
+                  (30, 27, 26, 1),
+                  (29, 26, 25, 1),
+                  (4, 0, 12, 1),
+                  (8, 4, 12, 1),
+                  (13, 8, 12, 1),
+                  (17, 13, 12, 1),
+                  (21, 17, 12, 1),
+                  (25, 21, 12, 1),
+                  (29, 25, 12, 1),
+                  (3, 31, 2, 1),
+                  (2, 30, 1, 1),
+                  (1, 29, 0, 1),
+                  (0, 29, 12, 1),
+                  (6, 7, 3, 1),
+                  (5, 6, 2, 1),
+                  (5, 1, 0, 1),
+                  (11, 7, 6, 1),
+                  (10, 6, 5, 1),
+                  (9, 5, 4, 1),
+                  (16, 11, 10, 1),
+                  (14, 15, 10, 1),
+                  (13, 14, 9, 1),
+                  (20, 16, 15, 1),
+                  (19, 15, 14, 1),
+                  (18, 14, 13, 1),
+                  (24, 20, 19, 1),
+                  (22, 23, 19, 1),
+                  (22, 18, 17, 1),
+                  (28, 24, 23, 1),
+                  (26, 27, 23, 1),
+                  (25, 26, 22, 1),
+                  (32, 28, 27, 1),
+                  (30, 31, 27, 1),
+                  (29, 30, 26, 1),
+                  (3, 32, 31, 1),
+                  (2, 31, 30, 1),
+                  (1, 30, 29, 1),
+                  (7, 32, 3, 2),
+                  (24, 28, 32, 2),
+                  (20, 11, 16, 2),
+                  (7, 11, 32, 2),
+                  (24, 32, 20, 2),
+                  (11, 20, 32, 2))
                 .into_iter()
-                .map(|(x, y, z)|
+                .map(|(x, y, z, s)|
                   Shape {
                    primitive:
                      Triangle(
@@ -2041,31 +2046,9 @@ f 21 33 12
                        (y, None, None),
                        (z, None, None)),
                    groups: vec!(),
+                   smoothing_groups: vec![s]
                   })
                 .collect()
-            },
-            Geometry {
-              material_name: Some("None".to_owned()),
-              smooth_shading_group: 2,
-              shapes:
-                vec!(
-                  (7, 32, 3),
-                  (24, 28, 32),
-                  (20, 11, 16),
-                  (7, 11, 32),
-                  (24, 32, 20),
-                  (11, 20, 32))
-                .into_iter()
-                .map(|(x, y, z)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (x, None, None),
-                        (y, None, None),
-                        (z, None, None)),
-                    groups: vec!(),
-                  })
-                .collect(),
             }
           ]
         }
@@ -2160,7 +2143,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec![
             Geometry {
               material_name: None,
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1),
@@ -2184,6 +2166,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: vec!(),
+                    smoothing_groups: vec!(),
                   })
                 .collect(),
             }
@@ -2276,7 +2259,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec![
             Geometry {
               material_name: None,
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3,  3, 0,  0, 1,  1, "all"),
@@ -2300,6 +2282,7 @@ f 5/5 1/13 4/14 8/6
                         (yv, Some(yt), None),
                         (zv, Some(zt), None)),
                     groups: vec!(group.into()),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
@@ -2391,7 +2374,6 @@ f 5/5 1/13 4/14 8/6
           geometry: vec![
             Geometry {
               material_name: None,
-              smooth_shading_group: 0,
               shapes:
                 vec!(
                   (3, 3, 0, 0, 1, 1, vec!("face", "one")),
@@ -2416,6 +2398,7 @@ f 5/5 1/13 4/14 8/6
                         (vy, Some(ty), None),
                         (vz, Some(tz), None)),
                     groups: groups.into_iter().map(|s| s.into()).collect(),
+                    smoothing_groups: vec!()
                   })
                 .collect(),
             }
