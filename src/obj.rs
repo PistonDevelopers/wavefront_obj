@@ -41,8 +41,6 @@ pub struct Object {
 pub struct Geometry {
   /// A reference to the material to apply to this geometry.
   pub material_name: Option<String>,
-  /// Should we use smooth shading when rendering this?
-  pub smooth_shading_group: usize,
   /// The shapes of which this geometry is composed.
   pub shapes: Vec<Shape>,
 }
@@ -57,7 +55,10 @@ pub struct Shape {
   pub primitive: Primitive,
   /// Associated groups. No associated group means the shape uses the default
   /// group.
-  pub groups: Vec<GroupName>
+  pub groups: Vec<GroupName>,
+  /// Associated smoothing groups. No associated smoothing group means the shape should be rendered
+  /// flat.
+  pub smoothing_groups: Vec<u32>
 }
 
 /// Name of a group.
@@ -447,24 +448,21 @@ impl<'a> Parser<'a> {
     self.parse_str()
   }
 
-  fn parse_smooth_shading(&mut self) -> Result<usize, ParseError> {
-    try!(self.parse_tag("s"));
-
-    match &try!(self.parse_str())[..] {
-      "off" => Ok(0),
-      s     => match s.parse() {
-        Ok(ret) => Ok(ret),
-        Err(_err) => self.error(format!("Expected usize or `off` but got {}.", s)),
-      }
-    }
-  }
-
   fn parse_isize_from(&mut self, s: &str) -> Result<isize, ParseError> {
     match s.parse() {
       Err(_err) =>
         return self.error(format!("Expected isize but got {}.", s)),
       Ok(ret) =>
         Ok(ret)
+    }
+  }
+
+  fn parse_u32(&mut self) -> Result<u32, ParseError> {
+    let s = try!(self.parse_str());
+
+    match s.parse() {
+      Err(_) => return self.error(format!("Expected u32 but got {}.", s)),
+      Ok(a) => Ok(a)
     }
   }
 
@@ -533,7 +531,7 @@ impl<'a> Parser<'a> {
 
   fn parse_face(
       &mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-      valid_nx: (usize, usize), current_groups: &Vec<GroupName>)
+      valid_nx: (usize, usize), current_groups: &Vec<GroupName>, current_smoothing_groups: &Vec<u32>)
       -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
       Some("f") => {},
@@ -556,7 +554,8 @@ impl<'a> Parser<'a> {
 
     Ok(to_triangles(&corner_list).into_iter().map(|prim| Shape {
       primitive: prim,
-      groups: current_groups.clone()
+      groups: current_groups.clone(),
+      smoothing_groups: current_smoothing_groups.clone()
     }).collect())
   }
 
@@ -568,8 +567,8 @@ impl<'a> Parser<'a> {
     let mut shapes = Vec::new();
 
     let mut current_material   = None;
-    let mut smooth_shading_group = 0;
     let mut current_groups = Vec::new();
+    let mut current_smoothing_groups = Vec::new();
 
     loop {
       match sliced(&self.peek()) {
@@ -580,27 +579,18 @@ impl<'a> Parser<'a> {
               Some(try!(self.parse_usemtl())));
 
           result.push(Geometry {
-            material_name:        old_material,
-            smooth_shading_group: smooth_shading_group,
-            shapes:               mem::replace(&mut shapes, Vec::new()),
+            material_name: old_material,
+            shapes: mem::replace(&mut shapes, Vec::new()),
           });
         },
         Some("s") => {
-          let old_smooth_shading =
-            mem::replace(
-              &mut smooth_shading_group,
-              try!(self.parse_smooth_shading()));
-
-          result.push(Geometry {
-            material_name:        current_material.clone(),
-            smooth_shading_group: old_smooth_shading,
-            shapes:               mem::replace(&mut shapes, Vec::new()),
-          })
+          self.advance();
+          current_smoothing_groups = try!(self.parse_smoothing_groups());
         },
         Some("f") | Some("l") => {
           shapes.extend(
             try!(self.parse_face(
-              valid_vtx, valid_tx, valid_nx, &current_groups))
+              valid_vtx, valid_tx, valid_nx, &current_groups, &current_smoothing_groups))
             .into_iter());
         },
         Some("g") => {
@@ -615,9 +605,8 @@ impl<'a> Parser<'a> {
     }
 
     result.push(Geometry {
-      material_name:      current_material,
-      smooth_shading_group: smooth_shading_group,
-      shapes:             shapes,
+      material_name: current_material,
+      shapes: shapes,
     });
 
     Ok(result.into_iter().filter(|ref x| !x.shapes.is_empty()).collect())
@@ -743,6 +732,25 @@ impl<'a> Parser<'a> {
 
       let name = try!(self.parse_str());
       groups.push(name);
+    }
+
+    Ok(groups)
+  }
+
+  fn parse_smoothing_groups(&mut self) -> Result<Vec<u32>, ParseError> {
+    let mut groups = Vec::new();
+
+    if !self.try(|p| p.parse_tag("off")).is_some() {
+      loop {
+        // ends the list of group names
+        // g without any name is valid and means default group
+        if let Some("\n") = sliced(&self.peek()) {
+          break;
+        }
+
+        let group = try!(self.parse_u32());
+        groups.push(group);
+      }
     }
 
     Ok(groups)
