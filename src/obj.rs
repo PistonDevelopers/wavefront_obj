@@ -740,16 +740,14 @@ impl<'a> Parser<'a> {
   fn parse_smoothing_groups(&mut self) -> Result<Vec<u32>, ParseError> {
     let mut groups = Vec::new();
 
-    if !self.try(|p| p.parse_tag("off")).is_some() {
+    if self.try(|p| p.parse_tag("off")).is_none() {
       loop {
-        // ends the list of group names
-        // g without any name is valid and means default group
+        let group = try!(self.parse_u32());
+        groups.push(group);
+
         if let Some("\n") = sliced(&self.peek()) {
           break;
         }
-
-        let group = try!(self.parse_u32());
-        groups.push(group);
       }
     }
 
