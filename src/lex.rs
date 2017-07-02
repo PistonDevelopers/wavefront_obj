@@ -11,8 +11,13 @@ pub struct ParseError {
 }
 
 #[inline]
+fn is_whitespace_except_newline(c: u8) -> bool {
+  c == b' ' || c == b'\t' || c == b'\r'
+}
+
+#[inline]
 fn is_whitespace(c: u8) -> bool {
-  c == b' ' || c == b'\t' || c == b'\n'
+  is_whitespace_except_newline(c) || c == b'\n'
 }
 
 #[derive(Clone)]
@@ -98,7 +103,7 @@ impl<'a> Lexer<'a> {
   }
 
   fn skip_whitespace_except_newline(&mut self) -> bool {
-    self.skip_while(|c| c == b'\t' || c == b' ')
+    self.skip_while(is_whitespace_except_newline)
   }
 
   /// Gets the next word in the input, as well as whether it's on
@@ -157,10 +162,12 @@ impl<'a> Iterator for Lexer<'a> {
 
 #[test]
 fn test_next_word() {
-  let mut l = Lexer::new("hello world\n this# is\na   \t test\n");
+  let mut l = Lexer::new("hello wor\rld\n this# is\r\na   \t test\n");
   assert_eq!(l.next_word(), Some(b"hello".to_vec()));
   assert_eq!(l.current_line_number, 1);
-  assert_eq!(l.next_word(), Some(b"world".to_vec()));
+  assert_eq!(l.next_word(), Some(b"wor".to_vec()));
+  assert_eq!(l.current_line_number, 1);
+  assert_eq!(l.next_word(), Some(b"ld".to_vec()));
   assert_eq!(l.current_line_number, 1);
   assert_eq!(l.next_word(), Some(b"\n".to_vec()));
   assert_eq!(l.current_line_number, 2);
