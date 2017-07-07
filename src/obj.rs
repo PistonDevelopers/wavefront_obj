@@ -2293,6 +2293,12 @@ f 5/5 1/13 4/14 8/6
 }
 
 #[test]
+fn issue_54() {
+  let input = include_str!("issue_54.obj");
+  let _ = parse(input.into());
+}
+
+#[test]
 fn several_groups() {
   use self::Primitive::Triangle;
 
