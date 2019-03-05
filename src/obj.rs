@@ -1,11 +1,11 @@
 //! A parser for Wavefront's `.obj` file format for storing 3D meshes.
+use std::borrow::ToOwned;
 use std::cmp::Ordering;
-use std::cmp::Ordering::{Equal, Less, Greater};
+use std::cmp::Ordering::{Equal, Greater, Less};
 use std::iter;
 use std::mem;
-use std::borrow::ToOwned;
 
-use lex::{ParseError,Lexer};
+use lex::{Lexer, ParseError};
 use util::OrderingExt;
 
 /// A set of objects, as listed in an `.obj` file.
@@ -58,7 +58,7 @@ pub struct Shape {
   pub groups: Vec<GroupName>,
   /// Associated smoothing groups. No associated smoothing group means the shape should be rendered
   /// flat.
-  pub smoothing_groups: Vec<u32>
+  pub smoothing_groups: Vec<u32>,
 }
 
 /// Name of a group.
@@ -96,7 +96,7 @@ pub type Normal = Vertex;
 pub struct TVertex {
   pub u: f64,
   pub v: f64,
-  pub w: f64
+  pub w: f64,
 }
 
 fn fuzzy_cmp(a: f64, b: f64, delta: f64) -> Ordering {
@@ -118,9 +118,11 @@ impl PartialEq for Vertex {
 
 impl PartialOrd for Vertex {
   fn partial_cmp(&self, other: &Vertex) -> Option<Ordering> {
-    Some(fuzzy_cmp(self.x, other.x, 0.00001)
-      .lexico(|| fuzzy_cmp(self.y, other.y, 0.00001))
-      .lexico(|| fuzzy_cmp(self.z, other.z, 0.00001)))
+    Some(
+      fuzzy_cmp(self.x, other.x, 0.00001)
+        .lexico(|| fuzzy_cmp(self.y, other.y, 0.00001))
+        .lexico(|| fuzzy_cmp(self.z, other.z, 0.00001)),
+    )
   }
 }
 
@@ -132,9 +134,11 @@ impl PartialEq for TVertex {
 
 impl PartialOrd for TVertex {
   fn partial_cmp(&self, other: &TVertex) -> Option<Ordering> {
-    Some(fuzzy_cmp(self.u, other.u, 0.00001)
-      .lexico(|| fuzzy_cmp(self.v, other.v, 0.00001))
-      .lexico(|| fuzzy_cmp(self.w, other.w, 0.00001)))
+    Some(
+      fuzzy_cmp(self.u, other.u, 0.00001)
+        .lexico(|| fuzzy_cmp(self.v, other.v, 0.00001))
+        .lexico(|| fuzzy_cmp(self.w, other.w, 0.00001)),
+    )
   }
 }
 
@@ -170,54 +174,41 @@ fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
 /// lines, or triangles.
 fn to_triangles(xs: &[VTNIndex]) -> Vec<Primitive> {
   match xs.len() {
-    0 => return vec!(),
-    1 => return vec!(Primitive::Point(xs[0])),
-    2 => return vec!(Primitive::Line(xs[0], xs[1])),
-    _ => {},
+    0 => return vec![],
+    1 => return vec![Primitive::Point(xs[0])],
+    2 => return vec![Primitive::Line(xs[0], xs[1])],
+    _ => {}
   }
 
   let last_elem = *xs.last().unwrap();
 
-  xs[..xs.len()-1]
+  xs[..xs.len() - 1]
     .iter()
-    .zip(xs[1..xs.len()-1].iter())
+    .zip(xs[1..xs.len() - 1].iter())
     .map(|(&x, &y)| Primitive::Triangle(last_elem, x, y))
     .collect()
 }
 
 #[test]
 fn test_to_triangles() {
-  use self::Primitive::{ Line, Point, Triangle };
+  use self::Primitive::{Line, Point, Triangle};
 
   assert_eq!(to_triangles(&[]), vec!());
 
-  assert_eq!(to_triangles(&[(3,None, None)]), vec!(Point((3,None, None))));
+  assert_eq!(
+    to_triangles(&[(3, None, None)]),
+    vec!(Point((3, None, None)))
+  );
 
   assert_eq!(
-    to_triangles(&[
-      (1, None, None)
-      ,(2, None, None)
-    ]),
-    vec!(
-      Line(
-        (1, None, None),
-        (2, None, None)
-      )
-    ));
+    to_triangles(&[(1, None, None), (2, None, None)]),
+    vec!(Line((1, None, None), (2, None, None)))
+  );
 
   assert_eq!(
-    to_triangles(&[
-      (1, None, None),
-      (2, None, None),
-      (3, None, None)
-    ]),
-    vec!(
-      Triangle(
-        (3, None, None),
-        (1, None, None),
-        (2, None, None)
-      )
-    ));
+    to_triangles(&[(1, None, None), (2, None, None), (3, None, None)]),
+    vec!(Triangle((3, None, None), (1, None, None), (2, None, None)))
+  );
 
   assert_eq!(
     to_triangles(&[
@@ -227,16 +218,10 @@ fn test_to_triangles() {
       (4, None, None)
     ]),
     vec!(
-      Triangle(
-        (4, None, None),
-        (1, None, None),
-        (2, None, None)),
-      Triangle(
-        (4, None, None),
-        (2, None, None),
-        (3, None, None)
-      )
-    ));
+      Triangle((4, None, None), (1, None, None), (2, None, None)),
+      Triangle((4, None, None), (2, None, None), (3, None, None))
+    )
+  );
 
   assert_eq!(
     to_triangles(&[
@@ -245,21 +230,13 @@ fn test_to_triangles() {
       (3, None, None),
       (4, None, None),
       (5, None, None)
-    ]), vec!(
-      Triangle(
-        (5, None, None),
-        (1, None, None),
-        (2, None, None)),
-      Triangle(
-        (5, None, None),
-        (2, None, None),
-        (3, None, None)),
-      Triangle(
-        (5, None, None),
-        (3, None, None),
-        (4, None, None)
-      )
-    ));
+    ]),
+    vec!(
+      Triangle((5, None, None), (1, None, None), (2, None, None)),
+      Triangle((5, None, None), (2, None, None), (3, None, None)),
+      Triangle((5, None, None), (3, None, None), (4, None, None))
+    )
+  );
 }
 
 #[derive(Clone)]
@@ -279,7 +256,7 @@ impl<'a> Parser<'a> {
   fn error<A>(&self, msg: String) -> Result<A, ParseError> {
     Err(ParseError {
       line_number: self.line_number,
-      message:     msg,
+      message: msg,
     })
   }
 
@@ -291,11 +268,12 @@ impl<'a> Parser<'a> {
     let ret = self.lexer.next();
 
     match ret {
-      None => {},
-      Some(ref s) =>
+      None => {}
+      Some(ref s) => {
         if *s == "\n" {
           self.line_number += 1;
-        },
+        }
+      }
     }
 
     ret
@@ -316,15 +294,18 @@ impl<'a> Parser<'a> {
   ///
   /// Be careful while using this function, especially in recursive parsing as it might end up with
   /// non-linear parsing.
-  fn try<P, T>(&mut self, parse: P) -> Option<T> where P: FnOnce(&mut Self) -> Result<T, ParseError> {
+  fn try<P, T>(&mut self, parse: P) -> Option<T>
+  where
+    P: FnOnce(&mut Self) -> Result<T, ParseError>,
+  {
     let mut tried = self.clone();
 
     match parse(&mut tried) {
       Ok(r) => {
         *self = tried;
         Some(r)
-      },
-      Err(_) => None
+      }
+      Err(_) => None,
     }
   }
 
@@ -332,9 +313,9 @@ impl<'a> Parser<'a> {
   fn zero_or_more_newlines(&mut self) {
     loop {
       match sliced(&self.peek()) {
-        None       => break,
-        Some("\n") => {},
-        Some(_)    => break,
+        None => break,
+        Some("\n") => {}
+        Some(_) => break,
       }
       self.advance();
     }
@@ -343,8 +324,7 @@ impl<'a> Parser<'a> {
   /// Parse just a constant string.
   fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
     match sliced(&self.next()) {
-      None =>
-        return self.error(format!("Expected `{}` but got end of input.", tag)),
+      None => return self.error(format!("Expected `{}` but got end of input.", tag)),
       Some(s) => {
         if s != tag {
           return self.error(format!("Expected `{}` but got {}.", tag, s));
@@ -352,7 +332,7 @@ impl<'a> Parser<'a> {
       }
     }
 
-    return Ok(())
+    return Ok(());
   }
 
   /// Skips over some newlines, failing if it didn't manage to skip any.
@@ -364,8 +344,7 @@ impl<'a> Parser<'a> {
 
   fn parse_str(&mut self) -> Result<String, ParseError> {
     match self.next() {
-      None =>
-        self.error(format!("Expected string but got end of input.")),
+      None => self.error(format!("Expected string but got end of input.")),
       Some(got) => {
         if got == "\n" {
           self.error(format!("Expected string but got `end of line`."))
@@ -378,7 +357,7 @@ impl<'a> Parser<'a> {
 
   fn parse_material_library(&mut self) -> Result<Option<String>, ParseError> {
     match sliced(&self.peek()) {
-      Some("mtllib") => {},
+      Some("mtllib") => {}
       _ => return Ok(None),
     }
     self.advance();
@@ -392,8 +371,8 @@ impl<'a> Parser<'a> {
         let name = self.parse_str();
         try!(self.one_or_more_newlines());
         name
-      },
-      _ => Ok(String::new())
+      }
+      _ => Ok(String::new()),
     }
   }
 
@@ -402,11 +381,9 @@ impl<'a> Parser<'a> {
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = try!(self.parse_str());
 
-    match s.parse() {
-      Err(_err) =>
-        self.error(format!("Expected f64 but got {}.", s)),
-      Ok(ret) =>
-        Ok(ret)
+    match lexical::try_parse(&s) {
+      Err(_err) => self.error(format!("Expected f64 but got {}.", s)),
+      Ok(ret) => Ok(ret),
     }
   }
 
@@ -428,8 +405,8 @@ impl<'a> Parser<'a> {
       Some(v) => {
         let w = self.try(Self::parse_double).unwrap_or(0.);
         Ok(TVertex { u: u, v: v, w: w })
-      },
-      None => Ok(TVertex { u: u, v: 0., w: 0. })
+      }
+      None => Ok(TVertex { u: u, v: 0., w: 0. }),
     }
   }
 
@@ -449,28 +426,29 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_isize_from(&mut self, s: &str) -> Result<isize, ParseError> {
-    match s.parse() {
-      Err(_err) =>
-        return self.error(format!("Expected isize but got {}.", s)),
-      Ok(ret) =>
-        Ok(ret)
+    match lexical::try_parse(&s) {
+      Err(_err) => return self.error(format!("Expected isize but got {}.", s)),
+      Ok(ret) => Ok(ret),
     }
   }
 
   fn parse_u32(&mut self) -> Result<u32, ParseError> {
     let s = try!(self.parse_str());
 
-    match s.parse() {
+    match lexical::try_parse(&s) {
       Err(_) => return self.error(format!("Expected u32 but got {}.", s)),
-      Ok(a) => Ok(a)
+      Ok(a) => Ok(a),
     }
   }
 
-  fn parse_vtindex(&mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-                  valid_nx: (usize, usize) ) -> Result<VTNIndex, ParseError> {
+  fn parse_vtindex(
+    &mut self,
+    valid_vtx: (usize, usize),
+    valid_tx: (usize, usize),
+    valid_nx: (usize, usize),
+  ) -> Result<VTNIndex, ParseError> {
     match sliced(&self.next()) {
-      None =>
-        return self.error("Expected vertex index but got end of input.".to_owned()),
+      None => return self.error("Expected vertex index but got end of input.".to_owned()),
       Some(s) => {
         let splits: Vec<&str> = s.split('/').collect();
         assert!(splits.len() != 0);
@@ -480,14 +458,14 @@ impl<'a> Parser<'a> {
             let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             Ok((v_idx, None, None))
-          },
+          }
           2 => {
             let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             let t_idx = try!(self.parse_isize_from(splits[1]));
             let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
             Ok((v_idx, Some(t_idx), None))
-          },
+          }
           3 => {
             let v_idx = try!(self.parse_isize_from(splits[0]));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
@@ -501,17 +479,19 @@ impl<'a> Parser<'a> {
             let n_idx = try!(self.parse_isize_from(splits[2]));
             let n_idx = try!(self.check_valid_index(valid_nx, n_idx));
             Ok((v_idx, t_idx_opt, Some(n_idx)))
-          },
-          n =>
-            self.error(format!("Expected at most 2 vertex indexes but got {}.", n)),
+          }
+          n => self.error(format!("Expected at most 2 vertex indexes but got {}.", n)),
         }
       }
     }
   }
 
   /// `valid_values` is a range of valid bounds for the actual value.
-  fn check_valid_index(&self, valid_values: (usize, usize), actual_value: isize)
-      -> Result<usize, ParseError> {
+  fn check_valid_index(
+    &self,
+    valid_values: (usize, usize),
+    actual_value: isize,
+  ) -> Result<usize, ParseError> {
     let (min, max) = valid_values;
 
     let mut x = actual_value;
@@ -525,19 +505,26 @@ impl<'a> Parser<'a> {
       assert!(x > 0);
       Ok((x - min as isize) as usize)
     } else {
-      self.error(format!("Expected index in the range [{}, {}), but got {}.", min, max, actual_value))
+      self.error(format!(
+        "Expected index in the range [{}, {}), but got {}.",
+        min, max, actual_value
+      ))
     }
   }
 
   fn parse_face(
-      &mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-      valid_nx: (usize, usize), current_groups: &Vec<GroupName>, current_smoothing_groups: &Vec<u32>)
-      -> Result<Vec<Shape>, ParseError> {
+    &mut self,
+    valid_vtx: (usize, usize),
+    valid_tx: (usize, usize),
+    valid_nx: (usize, usize),
+    current_groups: &Vec<GroupName>,
+    current_smoothing_groups: &Vec<u32>,
+  ) -> Result<Vec<Shape>, ParseError> {
     match sliced(&self.next()) {
-      Some("f") => {},
-      Some("l") => {},
-      None      => return self.error("Expected `f` or `l` but got end of input.".to_owned()),
-      Some(s)   => return self.error(format!("Expected `f` or `l` but got {}.", s)),
+      Some("f") => {}
+      Some("l") => {}
+      None => return self.error("Expected `f` or `l` but got end of input.".to_owned()),
+      Some(s) => return self.error(format!("Expected `f` or `l` but got {}.", s)),
     }
 
     let mut corner_list = Vec::new();
@@ -546,58 +533,68 @@ impl<'a> Parser<'a> {
 
     loop {
       match sliced(&self.peek()) {
-        None       => break,
+        None => break,
         Some("\n") => break,
-        Some( _  ) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx))),
+        Some(_) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx))),
       }
     }
 
-    Ok(to_triangles(&corner_list).into_iter().map(|prim| Shape {
-      primitive: prim,
-      groups: current_groups.clone(),
-      smoothing_groups: current_smoothing_groups.clone()
-    }).collect())
+    Ok(
+      to_triangles(&corner_list)
+        .into_iter()
+        .map(|prim| Shape {
+          primitive: prim,
+          groups: current_groups.clone(),
+          smoothing_groups: current_smoothing_groups.clone(),
+        })
+        .collect(),
+    )
   }
 
   fn parse_geometries(
-      &mut self, valid_vtx: (usize, usize), valid_tx: (usize, usize),
-      valid_nx: (usize, usize))
-      -> Result<Vec<Geometry>, ParseError> {
+    &mut self,
+    valid_vtx: (usize, usize),
+    valid_tx: (usize, usize),
+    valid_nx: (usize, usize),
+  ) -> Result<Vec<Geometry>, ParseError> {
     let mut result = Vec::new();
     let mut shapes = Vec::new();
 
-    let mut current_material   = None;
+    let mut current_material = None;
     let mut current_groups = Vec::new();
     let mut current_smoothing_groups = Vec::new();
 
     loop {
       match sliced(&self.peek()) {
         Some("usemtl") => {
-          let old_material =
-            mem::replace(
-              &mut current_material,
-              Some(try!(self.parse_usemtl())));
+          let old_material = mem::replace(&mut current_material, Some(try!(self.parse_usemtl())));
 
           result.push(Geometry {
             material_name: old_material,
             shapes: mem::replace(&mut shapes, Vec::new()),
           });
-        },
+        }
         Some("s") => {
           self.advance();
           current_smoothing_groups = try!(self.parse_smoothing_groups());
-        },
+        }
         Some("f") | Some("l") => {
           shapes.extend(
             try!(self.parse_face(
-              valid_vtx, valid_tx, valid_nx, &current_groups, &current_smoothing_groups))
-            .into_iter());
-        },
+              valid_vtx,
+              valid_tx,
+              valid_nx,
+              &current_groups,
+              &current_smoothing_groups
+            ))
+            .into_iter(),
+          );
+        }
         Some("g") => {
           self.advance();
           let names = try!(self.parse_groups());
           current_groups = names;
-        },
+        }
         _ => break,
       }
 
@@ -609,17 +606,23 @@ impl<'a> Parser<'a> {
       shapes: shapes,
     });
 
-    Ok(result.into_iter().filter(|ref x| !x.shapes.is_empty()).collect())
+    Ok(
+      result
+        .into_iter()
+        .filter(|ref x| !x.shapes.is_empty())
+        .collect(),
+    )
   }
 
-  fn parse_object(&mut self,
-      min_vertex_index: &mut usize,
-      max_vertex_index: &mut usize,
-      min_tex_index:    &mut usize,
-      max_tex_index:    &mut usize,
-      min_normal_index: &mut usize,
-      max_normal_index: &mut usize
-      ) -> Result<Object, ParseError> {
+  fn parse_object(
+    &mut self,
+    min_vertex_index: &mut usize,
+    max_vertex_index: &mut usize,
+    min_tex_index: &mut usize,
+    max_tex_index: &mut usize,
+    min_normal_index: &mut usize,
+    max_normal_index: &mut usize,
+  ) -> Result<Object, ParseError> {
     let name = try!(self.parse_object_name());
 
     let mut vertices = Vec::new();
@@ -642,17 +645,17 @@ impl<'a> Parser<'a> {
     }
 
     *max_vertex_index += vertices.len();
-    *max_tex_index    += tex_vertices.len();
+    *max_tex_index += tex_vertices.len();
     *max_normal_index += normals.len();
 
-    let geometry =
-      try!(self.parse_geometries(
-        (*min_vertex_index, *max_vertex_index),
-        (*min_tex_index, *max_tex_index),
-        (*min_normal_index, *max_normal_index)));
+    let geometry = try!(self.parse_geometries(
+      (*min_vertex_index, *max_vertex_index),
+      (*min_tex_index, *max_tex_index),
+      (*min_normal_index, *max_normal_index)
+    ));
 
     *min_vertex_index += vertices.len();
-    *min_tex_index    += tex_vertices.len();
+    *min_tex_index += tex_vertices.len();
     *min_normal_index += normals.len();
 
     Ok(Object {
@@ -669,8 +672,8 @@ impl<'a> Parser<'a> {
 
     let mut min_vertex_index = 1;
     let mut max_vertex_index = 1;
-    let mut min_tex_index    = 1;
-    let mut max_tex_index    = 1;
+    let mut min_tex_index = 1;
+    let mut max_tex_index = 1;
     let mut min_normal_index = 1;
     let mut max_normal_index = 1;
 
@@ -683,9 +686,10 @@ impl<'a> Parser<'a> {
             &mut min_tex_index,
             &mut max_tex_index,
             &mut min_normal_index,
-            &mut max_normal_index)));
-        },
-        None => break
+            &mut max_normal_index
+          )));
+        }
+        None => break,
       }
 
       self.zero_or_more_newlines();
@@ -708,15 +712,13 @@ impl<'a> Parser<'a> {
     self.zero_or_more_newlines();
 
     match self.peek() {
-      None =>
-        {},
-      Some(s) =>
-        return self.error(format!("Expected end of input but got {}.", s)),
+      None => {}
+      Some(s) => return self.error(format!("Expected end of input but got {}.", s)),
     }
 
     Ok(ObjSet {
       material_library: material_library,
-      objects:          objects,
+      objects: objects,
     })
   }
 
@@ -757,10 +759,9 @@ impl<'a> Parser<'a> {
 
 #[test]
 fn test_parse() {
-  use self::Primitive::{ Line, Triangle };
+  use self::Primitive::{Line, Triangle};
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.69 (sub 0) OBJ File: ''
 # www.blender.org
 mtllib untitled.mtl
@@ -865,215 +866,194 @@ f 43 47 48 44
 f 45 41 44 48
 "#;
 
-  let expected =
-     Ok(ObjSet {
-      material_library: Some("untitled.mtl".to_owned()),
-      objects: vec!(
-        Object {
-          name: "Cube.001".to_owned(),
-          vertices:
-            vec!((-1, -1,  1),
-                 (-1, -1, -1),
-                 ( 1, -1, -1),
-                 ( 1, -1,  1),
-                 (-1,  1,  1),
-                 (-1,  1, -1),
-                 ( 1,  1, -1),
-                 ( 1,  1,  1))
-            .into_iter()
-            .map(|(x, y, z)|
-              Vertex {
-                x: x as f64,
-                y: y as f64,
-                z: z as f64
-              })
-            .collect(),
-          tex_vertices: vec!(),
-          normals: vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("None".to_owned()),
-              shapes:
-                vec!((0, 4, 5),
-                     (0, 5, 1),
-                     (1, 5, 6),
-                     (1, 6, 2),
-                     (2, 6, 7),
-                     (2, 7, 3),
-                     (3, 7, 4),
-                     (3, 4, 0),
-                     (3, 0, 1),
-                     (3, 1, 2),
-                     (4, 7, 6),
-                     (4, 6, 5))
-                .into_iter()
-                .map(|(x, y, z)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (x, None, None),
-                        (y, None, None),
-                        (z, None, None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!(),
-                  })
-                .collect()
-            }
-          )
-        },
-        Object {
-          name: "Circle".to_owned(),
-          vertices:
-            vec!(
-              (0.0      , 0.0, -1.0),
-              (-0.19509 , 0.0, -0.980785),
-              (-0.382683, 0.0, -0.92388),
-              (-0.55557 , 0.0, -0.83147),
-              (-0.707107, 0.0, -0.707107),
-              (-0.83147 , 0.0, -0.55557),
-              (-0.92388 , 0.0, -0.382683),
-              (-0.980785, 0.0, -0.19509),
-              (-1.0     , 0.0, 0.0),
-              (-0.980785, 0.0, 0.19509),
-              (-0.92388 , 0.0, 0.382683),
-              (-0.83147 , 0.0, 0.55557),
-              (-0.707107, 0.0, 0.707107),
-              (-0.55557 , 0.0, 0.83147),
-              (-0.382683, 0.0, 0.92388),
-              (-0.19509 , 0.0, 0.980785),
-              (0.0      , 0.0, 1.0),
-              (0.195091 , 0.0, 0.980785),
-              (0.382684 , 0.0, 0.923879),
-              (0.555571 , 0.0, 0.831469),
-              (0.707107 , 0.0, 0.707106),
-              (0.83147  , 0.0, 0.55557),
-              (0.92388  , 0.0, 0.382683),
-              (0.980785 , 0.0, 0.195089),
-              (1.0      , 0.0, -0.000001),
-              (0.980785 , 0.0, -0.195091),
-              (0.923879 , 0.0, -0.382684),
-              (0.831469 , 0.0, -0.555571),
-              (0.707106 , 0.0, -0.707108),
-              (0.555569 , 0.0, -0.83147),
-              (0.382682 , 0.0, -0.92388),
-              (0.195089 , 0.0, -0.980786))
-            .into_iter()
-            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-            .collect(),
-          tex_vertices: vec!(),
-          normals: vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: None,
-              shapes:
-                vec!(
-                  (1, 0),
-                  (2, 1),
-                  (3, 2),
-                  (4, 3),
-                  (5, 4),
-                  (6, 5),
-                  (7, 6),
-                  (8, 7),
-                  (9, 8),
-                  (10, 9),
-                  (11, 10),
-                  (12, 11),
-                  (13, 12),
-                  (14, 13),
-                  (15, 14),
-                  (16, 15),
-                  (17, 16),
-                  (18, 17),
-                  (19, 18),
-                  (20, 19),
-                  (21, 20),
-                  (22, 21),
-                  (23, 22),
-                  (24, 23),
-                  (25, 24),
-                  (26, 25),
-                  (27, 26),
-                  (28, 27),
-                  (29, 28),
-                  (30, 29),
-                  (31, 30),
-                  (0, 31))
-                .into_iter()
-                .map(|(x, y)|
-                  Shape {
-                    primitive:
-                      Line(
-                        (x, None, None),
-                        (y, None, None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          )
-        },
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0,      -1.0, -1.0),
-              ( 1.0,      -1.0,  1.0),
-              (-1.0,      -1.0,  1.0),
-              (-1.0,      -1.0, -1.0),
-              ( 1.0,       1.0, -0.999999),
-              ( 0.999999,  1.0,  1.000001),
-              (-1.0,       1.0,  1.0),
-              (-1.0,       1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-            .collect(),
-          tex_vertices: vec!(),
-          normals: vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("Material".to_owned()),
-              shapes:
-                vec!(
-                  (3, 0, 1),
-                  (3, 1, 2),
-                  (5, 4, 7),
-                  (5, 7, 6),
-                  (1, 0, 4),
-                  (1, 4, 5),
-                  (2, 1, 5),
-                  (2, 5, 6),
-                  (3, 2, 6),
-                  (3, 6, 7),
-                  (7, 4, 0),
-                  (7, 0, 3))
-                .into_iter()
-                .map(|(x, y, z)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (x, None, None),
-                        (y, None, None),
-                        (z, None, None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!()
-                  })
-                .collect()
-            }
-          )
-        }
-      )
-    });
+  let expected = Ok(ObjSet {
+    material_library: Some("untitled.mtl".to_owned()),
+    objects: vec![
+      Object {
+        name: "Cube.001".to_owned(),
+        vertices: vec![
+          (-1, -1, 1),
+          (-1, -1, -1),
+          (1, -1, -1),
+          (1, -1, 1),
+          (-1, 1, 1),
+          (-1, 1, -1),
+          (1, 1, -1),
+          (1, 1, 1),
+        ]
+        .into_iter()
+        .map(|(x, y, z)| Vertex {
+          x: x as f64,
+          y: y as f64,
+          z: z as f64,
+        })
+        .collect(),
+        tex_vertices: vec![],
+        normals: vec![],
+        geometry: vec![Geometry {
+          material_name: Some("None".to_owned()),
+          shapes: vec![
+            (0, 4, 5),
+            (0, 5, 1),
+            (1, 5, 6),
+            (1, 6, 2),
+            (2, 6, 7),
+            (2, 7, 3),
+            (3, 7, 4),
+            (3, 4, 0),
+            (3, 0, 1),
+            (3, 1, 2),
+            (4, 7, 6),
+            (4, 6, 5),
+          ]
+          .into_iter()
+          .map(|(x, y, z)| Shape {
+            primitive: Triangle((x, None, None), (y, None, None), (z, None, None)),
+            groups: vec![],
+            smoothing_groups: vec![],
+          })
+          .collect(),
+        }],
+      },
+      Object {
+        name: "Circle".to_owned(),
+        vertices: vec![
+          (0.0, 0.0, -1.0),
+          (-0.19509, 0.0, -0.980785),
+          (-0.382683, 0.0, -0.92388),
+          (-0.55557, 0.0, -0.83147),
+          (-0.707107, 0.0, -0.707107),
+          (-0.83147, 0.0, -0.55557),
+          (-0.92388, 0.0, -0.382683),
+          (-0.980785, 0.0, -0.19509),
+          (-1.0, 0.0, 0.0),
+          (-0.980785, 0.0, 0.19509),
+          (-0.92388, 0.0, 0.382683),
+          (-0.83147, 0.0, 0.55557),
+          (-0.707107, 0.0, 0.707107),
+          (-0.55557, 0.0, 0.83147),
+          (-0.382683, 0.0, 0.92388),
+          (-0.19509, 0.0, 0.980785),
+          (0.0, 0.0, 1.0),
+          (0.195091, 0.0, 0.980785),
+          (0.382684, 0.0, 0.923879),
+          (0.555571, 0.0, 0.831469),
+          (0.707107, 0.0, 0.707106),
+          (0.83147, 0.0, 0.55557),
+          (0.92388, 0.0, 0.382683),
+          (0.980785, 0.0, 0.195089),
+          (1.0, 0.0, -0.000001),
+          (0.980785, 0.0, -0.195091),
+          (0.923879, 0.0, -0.382684),
+          (0.831469, 0.0, -0.555571),
+          (0.707106, 0.0, -0.707108),
+          (0.555569, 0.0, -0.83147),
+          (0.382682, 0.0, -0.92388),
+          (0.195089, 0.0, -0.980786),
+        ]
+        .into_iter()
+        .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+        .collect(),
+        tex_vertices: vec![],
+        normals: vec![],
+        geometry: vec![Geometry {
+          material_name: None,
+          shapes: vec![
+            (1, 0),
+            (2, 1),
+            (3, 2),
+            (4, 3),
+            (5, 4),
+            (6, 5),
+            (7, 6),
+            (8, 7),
+            (9, 8),
+            (10, 9),
+            (11, 10),
+            (12, 11),
+            (13, 12),
+            (14, 13),
+            (15, 14),
+            (16, 15),
+            (17, 16),
+            (18, 17),
+            (19, 18),
+            (20, 19),
+            (21, 20),
+            (22, 21),
+            (23, 22),
+            (24, 23),
+            (25, 24),
+            (26, 25),
+            (27, 26),
+            (28, 27),
+            (29, 28),
+            (30, 29),
+            (31, 30),
+            (0, 31),
+          ]
+          .into_iter()
+          .map(|(x, y)| Shape {
+            primitive: Line((x, None, None), (y, None, None)),
+            groups: vec![],
+            smoothing_groups: vec![],
+          })
+          .collect(),
+        }],
+      },
+      Object {
+        name: "Cube".to_owned(),
+        vertices: vec![
+          (1.0, -1.0, -1.0),
+          (1.0, -1.0, 1.0),
+          (-1.0, -1.0, 1.0),
+          (-1.0, -1.0, -1.0),
+          (1.0, 1.0, -0.999999),
+          (0.999999, 1.0, 1.000001),
+          (-1.0, 1.0, 1.0),
+          (-1.0, 1.0, -1.0),
+        ]
+        .into_iter()
+        .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+        .collect(),
+        tex_vertices: vec![],
+        normals: vec![],
+        geometry: vec![Geometry {
+          material_name: Some("Material".to_owned()),
+          shapes: vec![
+            (3, 0, 1),
+            (3, 1, 2),
+            (5, 4, 7),
+            (5, 7, 6),
+            (1, 0, 4),
+            (1, 4, 5),
+            (2, 1, 5),
+            (2, 5, 6),
+            (3, 2, 6),
+            (3, 6, 7),
+            (7, 4, 0),
+            (7, 0, 3),
+          ]
+          .into_iter()
+          .map(|(x, y, z)| Shape {
+            primitive: Triangle((x, None, None), (y, None, None), (z, None, None)),
+            groups: vec![],
+            smoothing_groups: vec![],
+          })
+          .collect(),
+        }],
+      },
+    ],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
 fn test_cube() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
 # www.blender.org
 mtllib cube.mtl
@@ -1110,93 +1090,86 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("cube.mtl".to_owned()),
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)|
-              Vertex {
-                x: x as f64,
-                y: y as f64,
-                z: z as f64 })
-            .collect(),
-          tex_vertices:
-            vec!(
-              (1.004952, 0.498633),
-              (0.754996, 0.498236),
-              (0.755393, 0.248279),
-              (1.005349, 0.248677),
-              (0.255083, 0.497442),
-              (0.25548, 0.247485),
-              (0.505437, 0.247882),
-              (0.505039, 0.497839),
-              (0.754598, 0.748193),
-              (0.504642, 0.747795),
-              (0.505834, -0.002074),
-              (0.75579, -0.001677),
-              (0.005127, 0.497044),
-              (0.005524, 0.247088))
-            .into_iter()
-            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
-            .collect(),
-          normals : vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("Material".to_owned()),
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1),
-                  (3, 3, 1, 1, 2, 2),
-                  (5, 7, 4, 4, 7, 5),
-                  (5, 7, 7, 5, 6, 6),
-                  (1, 1, 0, 8, 4, 9),
-                  (1, 1, 4, 9, 5, 7),
-                  (2, 2, 1, 1, 5, 7),
-                  (2, 2, 5, 7, 6, 6),
-                  (3, 11, 2, 2, 6, 6),
-                  (3, 11, 6, 6, 7, 10),
-                  (7, 5, 4, 4, 0, 12),
-                  (7, 5, 0, 12, 3, 13))
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          )
-        }
+  let expected = Ok(ObjSet {
+    material_library: Some("cube.mtl".to_owned()),
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    });
+      .into_iter()
+      .map(|(x, y, z)| Vertex {
+        x: x as f64,
+        y: y as f64,
+        z: z as f64,
+      })
+      .collect(),
+      tex_vertices: vec![
+        (1.004952, 0.498633),
+        (0.754996, 0.498236),
+        (0.755393, 0.248279),
+        (1.005349, 0.248677),
+        (0.255083, 0.497442),
+        (0.25548, 0.247485),
+        (0.505437, 0.247882),
+        (0.505039, 0.497839),
+        (0.754598, 0.748193),
+        (0.504642, 0.747795),
+        (0.505834, -0.002074),
+        (0.75579, -0.001677),
+        (0.005127, 0.497044),
+        (0.005524, 0.247088),
+      ]
+      .into_iter()
+      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: Some("Material".to_owned()),
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1),
+          (3, 3, 1, 1, 2, 2),
+          (5, 7, 4, 4, 7, 5),
+          (5, 7, 7, 5, 6, 6),
+          (1, 1, 0, 8, 4, 9),
+          (1, 1, 4, 9, 5, 7),
+          (2, 2, 1, 1, 5, 7),
+          (2, 2, 5, 7, 6, 6),
+          (3, 11, 2, 2, 6, 6),
+          (3, 11, 6, 6, 7, 10),
+          (7, 5, 4, 4, 0, 12),
+          (7, 5, 0, 12, 3, 13),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
 fn test_cube_anonymous_object() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
 # www.blender.org
 mtllib cube.mtl
@@ -1232,93 +1205,86 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("cube.mtl".to_owned()),
-      objects: vec![
-        Object {
-          name: String::new(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)|
-              Vertex {
-                x: x as f64,
-                y: y as f64,
-                z: z as f64 })
-            .collect(),
-          tex_vertices:
-            vec!(
-              (1.004952, 0.498633),
-              (0.754996, 0.498236),
-              (0.755393, 0.248279),
-              (1.005349, 0.248677),
-              (0.255083, 0.497442),
-              (0.25548, 0.247485),
-              (0.505437, 0.247882),
-              (0.505039, 0.497839),
-              (0.754598, 0.748193),
-              (0.504642, 0.747795),
-              (0.505834, -0.002074),
-              (0.75579, -0.001677),
-              (0.005127, 0.497044),
-              (0.005524, 0.247088))
-            .into_iter()
-            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
-            .collect(),
-          normals : vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("Material".to_owned()),
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1),
-                  (3, 3, 1, 1, 2, 2),
-                  (5, 7, 4, 4, 7, 5),
-                  (5, 7, 7, 5, 6, 6),
-                  (1, 1, 0, 8, 4, 9),
-                  (1, 1, 4, 9, 5, 7),
-                  (2, 2, 1, 1, 5, 7),
-                  (2, 2, 5, 7, 6, 6),
-                  (3, 11, 2, 2, 6, 6),
-                  (3, 11, 6, 6, 7, 10),
-                  (7, 5, 4, 4, 0, 12),
-                  (7, 5, 0, 12, 3, 13))
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          )
-        }
+  let expected = Ok(ObjSet {
+    material_library: Some("cube.mtl".to_owned()),
+    objects: vec![Object {
+      name: String::new(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    });
+      .into_iter()
+      .map(|(x, y, z)| Vertex {
+        x: x as f64,
+        y: y as f64,
+        z: z as f64,
+      })
+      .collect(),
+      tex_vertices: vec![
+        (1.004952, 0.498633),
+        (0.754996, 0.498236),
+        (0.755393, 0.248279),
+        (1.005349, 0.248677),
+        (0.255083, 0.497442),
+        (0.25548, 0.247485),
+        (0.505437, 0.247882),
+        (0.505039, 0.497839),
+        (0.754598, 0.748193),
+        (0.504642, 0.747795),
+        (0.505834, -0.002074),
+        (0.75579, -0.001677),
+        (0.005127, 0.497044),
+        (0.005524, 0.247088),
+      ]
+      .into_iter()
+      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: Some("Material".to_owned()),
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1),
+          (3, 3, 1, 1, 2, 2),
+          (5, 7, 4, 4, 7, 5),
+          (5, 7, 7, 5, 6, 6),
+          (1, 1, 0, 8, 4, 9),
+          (1, 1, 4, 9, 5, 7),
+          (2, 2, 1, 1, 5, 7),
+          (2, 2, 5, 7, 6, 6),
+          (3, 11, 2, 2, 6, 6),
+          (3, 11, 6, 6, 7, 10),
+          (7, 5, 4, 4, 0, 12),
+          (7, 5, 0, 12, 3, 13),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
 fn test_cube_tex_vert_missing_vw() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
 # www.blender.org
 mtllib cube.mtl
@@ -1355,93 +1321,74 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("cube.mtl".to_owned()),
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)|
-              Vertex {
-                x: x as f64,
-                y: y as f64,
-                z: z as f64 })
-            .collect(),
-          tex_vertices:
-            vec!(
-              1.004952,
-              0.754996,
-              0.755393,
-              1.005349,
-              0.255083,
-              0.25548,
-              0.505437,
-              0.505039,
-              0.754598,
-              0.504642,
-              0.505834,
-              0.75579,
-              0.005127,
-              0.005524)
-            .into_iter()
-            .map(|u| TVertex { u: u, v: 0., w: 0. })
-            .collect(),
-          normals : vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("Material".to_owned()),
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1),
-                  (3, 3, 1, 1, 2, 2),
-                  (5, 7, 4, 4, 7, 5),
-                  (5, 7, 7, 5, 6, 6),
-                  (1, 1, 0, 8, 4, 9),
-                  (1, 1, 4, 9, 5, 7),
-                  (2, 2, 1, 1, 5, 7),
-                  (2, 2, 5, 7, 6, 6),
-                  (3, 11, 2, 2, 6, 6),
-                  (3, 11, 6, 6, 7, 10),
-                  (7, 5, 4, 4, 0, 12),
-                  (7, 5, 0, 12, 3, 13))
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!(),
-                  })
-                .collect(),
-            }
-          )
-        }
+  let expected = Ok(ObjSet {
+    material_library: Some("cube.mtl".to_owned()),
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    });
+      .into_iter()
+      .map(|(x, y, z)| Vertex {
+        x: x as f64,
+        y: y as f64,
+        z: z as f64,
+      })
+      .collect(),
+      tex_vertices: vec![
+        1.004952, 0.754996, 0.755393, 1.005349, 0.255083, 0.25548, 0.505437, 0.505039, 0.754598,
+        0.504642, 0.505834, 0.75579, 0.005127, 0.005524,
+      ]
+      .into_iter()
+      .map(|u| TVertex { u: u, v: 0., w: 0. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: Some("Material".to_owned()),
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1),
+          (3, 3, 1, 1, 2, 2),
+          (5, 7, 4, 4, 7, 5),
+          (5, 7, 7, 5, 6, 6),
+          (1, 1, 0, 8, 4, 9),
+          (1, 1, 4, 9, 5, 7),
+          (2, 2, 1, 1, 5, 7),
+          (2, 2, 5, 7, 6, 6),
+          (3, 11, 2, 2, 6, 6),
+          (3, 11, 6, 6, 7, 10),
+          (7, 5, 4, 4, 0, 12),
+          (7, 5, 0, 12, 3, 13),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
 fn test_cube_3d_tex_vert() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
 # www.blender.org
 mtllib cube.mtl
@@ -1478,93 +1425,86 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("cube.mtl".to_owned()),
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)|
-              Vertex {
-                x: x as f64,
-                y: y as f64,
-                z: z as f64 })
-            .collect(),
-          tex_vertices:
-            vec!(
-              (1.004952, 0.498633),
-              (0.754996, 0.498236),
-              (0.755393, 0.248279),
-              (1.005349, 0.248677),
-              (0.255083, 0.497442),
-              (0.25548, 0.247485),
-              (0.505437, 0.247882),
-              (0.505039, 0.497839),
-              (0.754598, 0.748193),
-              (0.504642, 0.747795),
-              (0.505834, -0.002074),
-              (0.75579, -0.001677),
-              (0.005127, 0.497044),
-              (0.005524, 0.247088))
-            .into_iter()
-            .map(|(u, v)| TVertex { u: u, v: v, w: 1. })
-            .collect(),
-          normals : vec!(),
-          geometry: vec!(
-            Geometry {
-              material_name: Some("Material".to_owned()),
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1),
-                  (3, 3, 1, 1, 2, 2),
-                  (5, 7, 4, 4, 7, 5),
-                  (5, 7, 7, 5, 6, 6),
-                  (1, 1, 0, 8, 4, 9),
-                  (1, 1, 4, 9, 5, 7),
-                  (2, 2, 1, 1, 5, 7),
-                  (2, 2, 5, 7, 6, 6),
-                  (3, 11, 2, 2, 6, 6),
-                  (3, 11, 6, 6, 7, 10),
-                  (7, 5, 4, 4, 0, 12),
-                  (7, 5, 0, 12, 3, 13))
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          )
-        }
+  let expected = Ok(ObjSet {
+    material_library: Some("cube.mtl".to_owned()),
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    });
+      .into_iter()
+      .map(|(x, y, z)| Vertex {
+        x: x as f64,
+        y: y as f64,
+        z: z as f64,
+      })
+      .collect(),
+      tex_vertices: vec![
+        (1.004952, 0.498633),
+        (0.754996, 0.498236),
+        (0.755393, 0.248279),
+        (1.005349, 0.248677),
+        (0.255083, 0.497442),
+        (0.25548, 0.247485),
+        (0.505437, 0.247882),
+        (0.505039, 0.497839),
+        (0.754598, 0.748193),
+        (0.504642, 0.747795),
+        (0.505834, -0.002074),
+        (0.75579, -0.001677),
+        (0.005127, 0.497044),
+        (0.005524, 0.247088),
+      ]
+      .into_iter()
+      .map(|(u, v)| TVertex { u: u, v: v, w: 1. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: Some("Material".to_owned()),
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1),
+          (3, 3, 1, 1, 2, 2),
+          (5, 7, 4, 4, 7, 5),
+          (5, 7, 7, 5, 6, 6),
+          (1, 1, 0, 8, 4, 9),
+          (1, 1, 4, 9, 5, 7),
+          (2, 2, 1, 1, 5, 7),
+          (2, 2, 5, 7, 6, 6),
+          (3, 11, 2, 2, 6, 6),
+          (3, 11, 6, 6, 7, 10),
+          (7, 5, 4, 4, 0, 12),
+          (7, 5, 0, 12, 3, 13),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
 #[test]
 fn test_normals_no_tex() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.70 (sub 4) OBJ File: ''
 # www.blender.org
 mtllib normal-cone.mtl
@@ -1671,153 +1611,145 @@ f 33//31 2//31 1//31
 f 3//32 2//32 4//32
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("normal-cone.mtl".to_owned()),
-      objects: vec![
-      Object {
-        name: "Cone".to_owned(),
-        vertices:
-          vec!(
-            (0.000000  , -1.000000 , -1.000000),
-            (0.000000  ,  1.000000 , 0.000000),
-            (0.195090  , -1.000000 , -0.980785),
-            (0.382683  , -1.000000 , -0.923880),
-            (0.555570  , -1.000000 , -0.831470),
-            (0.707107  , -1.000000 , -0.707107),
-            (0.831470  , -1.000000 , -0.555570),
-            (0.923880  , -1.000000 , -0.382683),
-            (0.980785  , -1.000000 , -0.195090),
-            (1.000000  , -1.000000 , -0.000000),
-            (0.980785  , -1.000000 , 0.195090),
-            (0.923880  , -1.000000 , 0.382683),
-            (0.831470  , -1.000000 , 0.555570),
-            (0.707107  , -1.000000 , 0.707107),
-            (0.555570  , -1.000000 , 0.831470),
-            (0.382683  , -1.000000 , 0.923880),
-            (0.195090  , -1.000000 , 0.980785),
-            (-0.000000 , -1.000000 , 1.000000),
-            (-0.195091 , -1.000000 , 0.980785),
-            (-0.382684 , -1.000000 , 0.923879),
-            (-0.555571 , -1.000000 , 0.831469),
-            (-0.707107 , -1.000000 , 0.707106),
-            (-0.831470 , -1.000000 , 0.555570),
-            (-0.923880 , -1.000000 , 0.382683),
-            (-0.980785 , -1.000000 , 0.195089),
-            (-1.000000 , -1.000000 , -0.000001),
-            (-0.980785 , -1.000000 , -0.195091),
-            (-0.923879 , -1.000000 , -0.382684),
-            (-0.831469 , -1.000000 , -0.555571),
-            (-0.707106 , -1.000000 , -0.707108),
-            (-0.555569 , -1.000000 , -0.831470),
-            (-0.382682 , -1.000000 , -0.923880),
-            (-0.195089 , -1.000000 , -0.980786))
-          .into_iter()
-          .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-          .collect(),
-        tex_vertices: vec!(),
-        normals:
-          vec!(
-            (-0.259887 , 0.445488 , -0.856737),
-            (0.087754 , 0.445488 , -0.890977),
-            (-0.422035 , 0.445488 , -0.789574),
-            (-0.567964 , 0.445488 , -0.692068),
-            (-0.692066 , 0.445488 , -0.567966),
-            (-0.789573 , 0.445488 , -0.422037),
-            (-0.856737 , 0.445488 , -0.259889),
-            (-0.890977 , 0.445488 , -0.087754),
-            (-0.890977 , 0.445488 , 0.087753),
-            (-0.856737 , 0.445488 , 0.259887),
-            (-0.789574 , 0.445488 , 0.422035),
-            (-0.692067 , 0.445488 , 0.567964),
-            (-0.567965 , 0.445488 , 0.692066),
-            (-0.422036 , 0.445488 , 0.789573),
-            (-0.259889 , 0.445488 , 0.856737),
-            (-0.087754 , 0.445488 , 0.890977),
-            (0.087753 , 0.445488 , 0.890977),
-            (0.259888 , 0.445488 , 0.856737),
-            (0.422036 , 0.445488 , 0.789573),
-            (0.567965 , 0.445488 , 0.692067),
-            (0.692067 , 0.445488 , 0.567965),
-            (0.789573 , 0.445488 , 0.422035),
-            (0.856737 , 0.445488 , 0.259888),
-            (0.890977 , 0.445488 , 0.087753),
-            (0.890977 , 0.445488 , -0.087754),
-            (0.856737 , 0.445488 , -0.259888),
-            (0.789573 , 0.445488 , -0.422036),
-            (0.692067 , 0.445488 , -0.567965),
-            (0.567965 , 0.445488 , -0.692067),
-            (0.422036 , 0.445488 , -0.789573),
-            (-0.087753 , 0.445488 , -0.890977),
-            (0.259888 , 0.445488 , -0.856737),
-            (0.000000 , -1.000000 , -0.000000))
-          .into_iter()
-          .map(|(x, y, z)| Normal { x: x, y: y, z: z })
-          .collect(),
-        geometry: vec![
-          Geometry {
-            material_name: Some("Material.002".to_owned()),
-            shapes:
-              vec!(
-                (32, 0, 31, 0, 1, 0),
-                (2, 1, 0, 1, 1, 1),
-                (31, 2, 30, 2, 1, 2),
-                (30, 3, 29, 3, 1, 3),
-                (29, 4, 28, 4, 1, 4),
-                (28, 5, 27, 5, 1, 5),
-                (27, 6, 26, 6, 1, 6),
-                (26, 7, 25, 7, 1, 7),
-                (25, 8, 24, 8, 1, 8),
-                (24, 9, 23, 9, 1, 9),
-                (23, 10, 22, 10, 1, 10),
-                (22, 11, 21, 11, 1, 11),
-                (21, 12, 20, 12, 1, 12),
-                (20, 13, 19, 13, 1, 13),
-                (19, 14, 18, 14, 1, 14),
-                (18, 15, 17, 15, 1, 15),
-                (17, 16, 16, 16, 1, 16),
-                (16, 17, 15, 17, 1, 17),
-                (15, 18, 14, 18, 1, 18),
-                (14, 19, 13, 19, 1, 19),
-                (13, 20, 12, 20, 1, 20),
-                (12, 21, 11, 21, 1, 21),
-                (11, 22, 10, 22, 1, 22),
-                (10, 23, 9, 23, 1, 23),
-                (9, 24, 8, 24, 1, 24),
-                (8, 25, 7, 25, 1, 25),
-                (7, 26, 6, 26, 1, 26),
-                (6, 27, 5, 27, 1, 27),
-                (5, 28, 4, 28, 1, 28),
-                (4, 29, 3, 29, 1, 29),
-                (0, 30, 32, 30, 1, 30),
-                (3, 31, 2, 31, 1, 31))
-              .into_iter()
-              .map(|(vx, nx, vy, ny, vz, nz)|
-                Shape {
-                  primitive:
-                    Triangle(
-                      (vx, None, Some(nx)),
-                      (vy, None, Some(ny)),
-                      (vz, None, Some(nz))),
-                  groups: vec!(),
-                  smoothing_groups: vec!()
-                })
-              .collect(),
-          }
+  let expected = Ok(ObjSet {
+    material_library: Some("normal-cone.mtl".to_owned()),
+    objects: vec![Object {
+      name: "Cone".to_owned(),
+      vertices: vec![
+        (0.000000, -1.000000, -1.000000),
+        (0.000000, 1.000000, 0.000000),
+        (0.195090, -1.000000, -0.980785),
+        (0.382683, -1.000000, -0.923880),
+        (0.555570, -1.000000, -0.831470),
+        (0.707107, -1.000000, -0.707107),
+        (0.831470, -1.000000, -0.555570),
+        (0.923880, -1.000000, -0.382683),
+        (0.980785, -1.000000, -0.195090),
+        (1.000000, -1.000000, -0.000000),
+        (0.980785, -1.000000, 0.195090),
+        (0.923880, -1.000000, 0.382683),
+        (0.831470, -1.000000, 0.555570),
+        (0.707107, -1.000000, 0.707107),
+        (0.555570, -1.000000, 0.831470),
+        (0.382683, -1.000000, 0.923880),
+        (0.195090, -1.000000, 0.980785),
+        (-0.000000, -1.000000, 1.000000),
+        (-0.195091, -1.000000, 0.980785),
+        (-0.382684, -1.000000, 0.923879),
+        (-0.555571, -1.000000, 0.831469),
+        (-0.707107, -1.000000, 0.707106),
+        (-0.831470, -1.000000, 0.555570),
+        (-0.923880, -1.000000, 0.382683),
+        (-0.980785, -1.000000, 0.195089),
+        (-1.000000, -1.000000, -0.000001),
+        (-0.980785, -1.000000, -0.195091),
+        (-0.923879, -1.000000, -0.382684),
+        (-0.831469, -1.000000, -0.555571),
+        (-0.707106, -1.000000, -0.707108),
+        (-0.555569, -1.000000, -0.831470),
+        (-0.382682, -1.000000, -0.923880),
+        (-0.195089, -1.000000, -0.980786),
+      ]
+      .into_iter()
+      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .collect(),
+      tex_vertices: vec![],
+      normals: vec![
+        (-0.259887, 0.445488, -0.856737),
+        (0.087754, 0.445488, -0.890977),
+        (-0.422035, 0.445488, -0.789574),
+        (-0.567964, 0.445488, -0.692068),
+        (-0.692066, 0.445488, -0.567966),
+        (-0.789573, 0.445488, -0.422037),
+        (-0.856737, 0.445488, -0.259889),
+        (-0.890977, 0.445488, -0.087754),
+        (-0.890977, 0.445488, 0.087753),
+        (-0.856737, 0.445488, 0.259887),
+        (-0.789574, 0.445488, 0.422035),
+        (-0.692067, 0.445488, 0.567964),
+        (-0.567965, 0.445488, 0.692066),
+        (-0.422036, 0.445488, 0.789573),
+        (-0.259889, 0.445488, 0.856737),
+        (-0.087754, 0.445488, 0.890977),
+        (0.087753, 0.445488, 0.890977),
+        (0.259888, 0.445488, 0.856737),
+        (0.422036, 0.445488, 0.789573),
+        (0.567965, 0.445488, 0.692067),
+        (0.692067, 0.445488, 0.567965),
+        (0.789573, 0.445488, 0.422035),
+        (0.856737, 0.445488, 0.259888),
+        (0.890977, 0.445488, 0.087753),
+        (0.890977, 0.445488, -0.087754),
+        (0.856737, 0.445488, -0.259888),
+        (0.789573, 0.445488, -0.422036),
+        (0.692067, 0.445488, -0.567965),
+        (0.567965, 0.445488, -0.692067),
+        (0.422036, 0.445488, -0.789573),
+        (-0.087753, 0.445488, -0.890977),
+        (0.259888, 0.445488, -0.856737),
+        (0.000000, -1.000000, -0.000000),
+      ]
+      .into_iter()
+      .map(|(x, y, z)| Normal { x: x, y: y, z: z })
+      .collect(),
+      geometry: vec![Geometry {
+        material_name: Some("Material.002".to_owned()),
+        shapes: vec![
+          (32, 0, 31, 0, 1, 0),
+          (2, 1, 0, 1, 1, 1),
+          (31, 2, 30, 2, 1, 2),
+          (30, 3, 29, 3, 1, 3),
+          (29, 4, 28, 4, 1, 4),
+          (28, 5, 27, 5, 1, 5),
+          (27, 6, 26, 6, 1, 6),
+          (26, 7, 25, 7, 1, 7),
+          (25, 8, 24, 8, 1, 8),
+          (24, 9, 23, 9, 1, 9),
+          (23, 10, 22, 10, 1, 10),
+          (22, 11, 21, 11, 1, 11),
+          (21, 12, 20, 12, 1, 12),
+          (20, 13, 19, 13, 1, 13),
+          (19, 14, 18, 14, 1, 14),
+          (18, 15, 17, 15, 1, 15),
+          (17, 16, 16, 16, 1, 16),
+          (16, 17, 15, 17, 1, 17),
+          (15, 18, 14, 18, 1, 18),
+          (14, 19, 13, 19, 1, 19),
+          (13, 20, 12, 20, 1, 20),
+          (12, 21, 11, 21, 1, 21),
+          (11, 22, 10, 22, 1, 22),
+          (10, 23, 9, 23, 1, 23),
+          (9, 24, 8, 24, 1, 24),
+          (8, 25, 7, 25, 1, 25),
+          (7, 26, 6, 26, 1, 26),
+          (6, 27, 5, 27, 1, 27),
+          (5, 28, 4, 28, 1, 28),
+          (4, 29, 3, 29, 1, 29),
+          (0, 30, 32, 30, 1, 30),
+          (3, 31, 2, 31, 1, 31),
         ]
-      }
-    ]
+        .into_iter()
+        .map(|(vx, nx, vy, ny, vz, nz)| Shape {
+          primitive: Triangle(
+            (vx, None, Some(nx)),
+            (vy, None, Some(ny)),
+            (vz, None, Some(nz)),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
   });
-  assert_eq!( parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case.to_owned()), expected);
 }
-
 
 #[test]
 fn test_smoothing_groups() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.72 (sub 0) OBJ File: 'dome.blend'
 # www.blender.org
 mtllib dome.mtl
@@ -1922,149 +1854,135 @@ f 33 21 25
 f 21 33 12
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: Some("dome.mtl".to_owned()),
-      objects: vec![
-        Object {
-          name: "Dome".to_owned(),
-          vertices:
-            vec!(
-            (-0.382683, 0.92388, 0.0),
-            (-0.707107, 0.707107, 0.0),
-            (-0.92388, 0.382683, 0.0),
-            (-1.0, 0.0, 0.0),
-            (-0.270598, 0.92388, -0.270598),
-            (-0.5, 0.707107, -0.5),
-            (-0.653282, 0.382683, -0.653281),
-            (-0.707107, 0.0, -0.707107),
-            (0.0, 0.92388, -0.382683),
-            (0.0, 0.707107, -0.707107),
-            (0.0, 0.382683, -0.923879),
-            (0.0, 0.0, -1.0),
-            (0.0, 1.0, 0.0),
-            (0.270598, 0.92388, -0.270598),
-            (0.5, 0.707107, -0.5),
-            (0.653281, 0.382683, -0.653281),
-            (0.707106, 0.0, -0.707107),
-            (0.382683, 0.92388, 0.0),
-            (0.707106, 0.707107, 0.0),
-            (0.923879, 0.382683, 0.0),
-            (1.0, 0.0, 0.0),
-            (0.270598, 0.92388, 0.270598),
-            (0.5, 0.707107, 0.5),
-            (0.653281, 0.382683, 0.653281),
-            (0.707106, 0.0, 0.707107),
-            (0.0, 0.92388, 0.382683),
-            (0.0, 0.707107, 0.707107),
-            (0.0, 0.382683, 0.923879),
-            (0.0, 0.0, 1.0),
-            (-0.270598, 0.92388, 0.270598),
-            (-0.5, 0.707107, 0.5),
-            (-0.653281, 0.382683, 0.653281),
-            (-0.707107, 0.0, 0.707107))
-            .into_iter()
-            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-            .collect(),
-          tex_vertices: vec![],
-          normals: vec![],
-          geometry: vec![
-            Geometry {
-              material_name: Some("None".to_owned()),
-              shapes:
-                vec!(
-                  (6, 3, 2, 1),
-                  (5, 2, 1, 1),
-                  (5, 0, 4, 1),
-                  (11, 6, 10, 1),
-                  (10, 5, 9, 1),
-                  (9, 4, 8, 1),
-                  (16, 10, 15, 1),
-                  (14, 10, 9, 1),
-                  (13, 9, 8, 1),
-                  (20, 15, 19, 1),
-                  (19, 14, 18, 1),
-                  (18, 13, 17, 1),
-                  (24, 19, 23, 1),
-                  (22, 19, 18, 1),
-                  (22, 17, 21, 1),
-                  (28, 23, 27, 1),
-                  (26, 23, 22, 1),
-                  (25, 22, 21, 1),
-                  (32, 27, 31, 1),
-                  (30, 27, 26, 1),
-                  (29, 26, 25, 1),
-                  (4, 0, 12, 1),
-                  (8, 4, 12, 1),
-                  (13, 8, 12, 1),
-                  (17, 13, 12, 1),
-                  (21, 17, 12, 1),
-                  (25, 21, 12, 1),
-                  (29, 25, 12, 1),
-                  (3, 31, 2, 1),
-                  (2, 30, 1, 1),
-                  (1, 29, 0, 1),
-                  (0, 29, 12, 1),
-                  (6, 7, 3, 1),
-                  (5, 6, 2, 1),
-                  (5, 1, 0, 1),
-                  (11, 7, 6, 1),
-                  (10, 6, 5, 1),
-                  (9, 5, 4, 1),
-                  (16, 11, 10, 1),
-                  (14, 15, 10, 1),
-                  (13, 14, 9, 1),
-                  (20, 16, 15, 1),
-                  (19, 15, 14, 1),
-                  (18, 14, 13, 1),
-                  (24, 20, 19, 1),
-                  (22, 23, 19, 1),
-                  (22, 18, 17, 1),
-                  (28, 24, 23, 1),
-                  (26, 27, 23, 1),
-                  (25, 26, 22, 1),
-                  (32, 28, 27, 1),
-                  (30, 31, 27, 1),
-                  (29, 30, 26, 1),
-                  (3, 32, 31, 1),
-                  (2, 31, 30, 1),
-                  (1, 30, 29, 1),
-                  (7, 32, 3, 2),
-                  (24, 28, 32, 2),
-                  (20, 11, 16, 2),
-                  (7, 11, 32, 2),
-                  (24, 32, 20, 2),
-                  (11, 20, 32, 2))
-                .into_iter()
-                .map(|(x, y, z, s)|
-                  Shape {
-                   primitive:
-                     Triangle(
-                       (x, None, None),
-                       (y, None, None),
-                       (z, None, None)),
-                   groups: vec!(),
-                   smoothing_groups: vec![s]
-                  })
-                .collect()
-            }
-          ]
-        }
+  let expected = Ok(ObjSet {
+    material_library: Some("dome.mtl".to_owned()),
+    objects: vec![Object {
+      name: "Dome".to_owned(),
+      vertices: vec![
+        (-0.382683, 0.92388, 0.0),
+        (-0.707107, 0.707107, 0.0),
+        (-0.92388, 0.382683, 0.0),
+        (-1.0, 0.0, 0.0),
+        (-0.270598, 0.92388, -0.270598),
+        (-0.5, 0.707107, -0.5),
+        (-0.653282, 0.382683, -0.653281),
+        (-0.707107, 0.0, -0.707107),
+        (0.0, 0.92388, -0.382683),
+        (0.0, 0.707107, -0.707107),
+        (0.0, 0.382683, -0.923879),
+        (0.0, 0.0, -1.0),
+        (0.0, 1.0, 0.0),
+        (0.270598, 0.92388, -0.270598),
+        (0.5, 0.707107, -0.5),
+        (0.653281, 0.382683, -0.653281),
+        (0.707106, 0.0, -0.707107),
+        (0.382683, 0.92388, 0.0),
+        (0.707106, 0.707107, 0.0),
+        (0.923879, 0.382683, 0.0),
+        (1.0, 0.0, 0.0),
+        (0.270598, 0.92388, 0.270598),
+        (0.5, 0.707107, 0.5),
+        (0.653281, 0.382683, 0.653281),
+        (0.707106, 0.0, 0.707107),
+        (0.0, 0.92388, 0.382683),
+        (0.0, 0.707107, 0.707107),
+        (0.0, 0.382683, 0.923879),
+        (0.0, 0.0, 1.0),
+        (-0.270598, 0.92388, 0.270598),
+        (-0.5, 0.707107, 0.5),
+        (-0.653281, 0.382683, 0.653281),
+        (-0.707107, 0.0, 0.707107),
       ]
-    }
-  );
-
+      .into_iter()
+      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .collect(),
+      tex_vertices: vec![],
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: Some("None".to_owned()),
+        shapes: vec![
+          (6, 3, 2, 1),
+          (5, 2, 1, 1),
+          (5, 0, 4, 1),
+          (11, 6, 10, 1),
+          (10, 5, 9, 1),
+          (9, 4, 8, 1),
+          (16, 10, 15, 1),
+          (14, 10, 9, 1),
+          (13, 9, 8, 1),
+          (20, 15, 19, 1),
+          (19, 14, 18, 1),
+          (18, 13, 17, 1),
+          (24, 19, 23, 1),
+          (22, 19, 18, 1),
+          (22, 17, 21, 1),
+          (28, 23, 27, 1),
+          (26, 23, 22, 1),
+          (25, 22, 21, 1),
+          (32, 27, 31, 1),
+          (30, 27, 26, 1),
+          (29, 26, 25, 1),
+          (4, 0, 12, 1),
+          (8, 4, 12, 1),
+          (13, 8, 12, 1),
+          (17, 13, 12, 1),
+          (21, 17, 12, 1),
+          (25, 21, 12, 1),
+          (29, 25, 12, 1),
+          (3, 31, 2, 1),
+          (2, 30, 1, 1),
+          (1, 29, 0, 1),
+          (0, 29, 12, 1),
+          (6, 7, 3, 1),
+          (5, 6, 2, 1),
+          (5, 1, 0, 1),
+          (11, 7, 6, 1),
+          (10, 6, 5, 1),
+          (9, 5, 4, 1),
+          (16, 11, 10, 1),
+          (14, 15, 10, 1),
+          (13, 14, 9, 1),
+          (20, 16, 15, 1),
+          (19, 15, 14, 1),
+          (18, 14, 13, 1),
+          (24, 20, 19, 1),
+          (22, 23, 19, 1),
+          (22, 18, 17, 1),
+          (28, 24, 23, 1),
+          (26, 27, 23, 1),
+          (25, 26, 22, 1),
+          (32, 28, 27, 1),
+          (30, 31, 27, 1),
+          (29, 30, 26, 1),
+          (3, 32, 31, 1),
+          (2, 31, 30, 1),
+          (1, 30, 29, 1),
+          (7, 32, 3, 2),
+          (24, 28, 32, 2),
+          (20, 11, 16, 2),
+          (7, 11, 32, 2),
+          (24, 32, 20, 2),
+          (11, 20, 32, 2),
+        ]
+        .into_iter()
+        .map(|(x, y, z, s)| Shape {
+          primitive: Triangle((x, None, None), (y, None, None), (z, None, None)),
+          groups: vec![],
+          smoothing_groups: vec![s],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
 
-
 #[test]
 fn no_mtls() {
-  use self::Primitive::{ Triangle };
+  use self::Primitive::Triangle;
 
-  let test_case =
-r#"
+  let test_case = r#"
 # Blender v2.71 (sub 0) OBJ File: 'cube.blend'
 # www.blender.org
 o Cube
@@ -2099,79 +2017,73 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    Ok(ObjSet {
-      material_library: None,
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-            .collect(),
-          tex_vertices:
-            vec!(
-              (1.004952, 0.498633),
-              (0.754996, 0.498236),
-              (0.755393, 0.248279),
-              (1.005349, 0.248677),
-              (0.255083, 0.497442),
-              (0.25548, 0.247485),
-              (0.505437, 0.247882),
-              (0.505039, 0.497839),
-              (0.754598, 0.748193),
-              (0.504642, 0.747795),
-              (0.505834, -0.002074),
-              (0.75579, -0.001677),
-              (0.005127, 0.497044),
-              (0.005524, 0.247088))
-            .into_iter()
-            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
-            .collect(),
-          normals : vec![],
-          geometry: vec![
-            Geometry {
-              material_name: None,
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1),
-                  (3, 3, 1, 1, 2, 2),
-                  (5, 7, 4, 4, 7, 5),
-                  (5, 7, 7, 5, 6, 6),
-                  (1, 1, 0, 8, 4, 9),
-                  (1, 1, 4, 9, 5, 7),
-                  (2, 2, 1, 1, 5, 7),
-                  (2, 2, 5, 7, 6, 6),
-                  (3, 11, 2, 2, 6, 6),
-                  (3, 11, 6, 6, 7, 10),
-                  (7, 5, 4, 4, 0, 12),
-                  (7, 5, 0, 12, 3, 13))
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: vec!(),
-                    smoothing_groups: vec!(),
-                  })
-                .collect(),
-            }
-          ]
-        }
+  let expected = Ok(ObjSet {
+    material_library: None,
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    });
+      .into_iter()
+      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .collect(),
+      tex_vertices: vec![
+        (1.004952, 0.498633),
+        (0.754996, 0.498236),
+        (0.755393, 0.248279),
+        (1.005349, 0.248677),
+        (0.255083, 0.497442),
+        (0.25548, 0.247485),
+        (0.505437, 0.247882),
+        (0.505039, 0.497839),
+        (0.754598, 0.748193),
+        (0.504642, 0.747795),
+        (0.505834, -0.002074),
+        (0.75579, -0.001677),
+        (0.005127, 0.497044),
+        (0.005524, 0.247088),
+      ]
+      .into_iter()
+      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: None,
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1),
+          (3, 3, 1, 1, 2, 2),
+          (5, 7, 4, 4, 7, 5),
+          (5, 7, 7, 5, 6, 6),
+          (1, 1, 0, 8, 4, 9),
+          (1, 1, 4, 9, 5, 7),
+          (2, 2, 1, 1, 5, 7),
+          (2, 2, 5, 7, 6, 6),
+          (3, 11, 2, 2, 6, 6),
+          (3, 11, 6, 6, 7, 10),
+          (7, 5, 4, 4, 0, 12),
+          (7, 5, 0, 12, 3, 13),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: vec![],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  });
 
   assert_eq!(parse(test_case.to_owned()), expected);
 }
@@ -2180,8 +2092,7 @@ f 5/5 1/13 4/14 8/6
 fn one_group() {
   use self::Primitive::Triangle;
 
-  let input =
-"
+  let input = "
 o Cube
 v 1.000000 -1.000000 -1.000000\r
 v 1.000000 -1.000000 1.000000
@@ -2215,79 +2126,73 @@ f 3/3 7/7 8/11 4/12
 f 5/5 1/13 4/14 8/6
 ";
 
-  let expected =
-    ObjSet {
-      material_library: None,
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices:
-            vec!(
-              ( 1.0, -1.0, -1.0),
-              ( 1.0, -1.0,  1.0),
-              (-1.0, -1.0,  1.0),
-              (-1.0, -1.0, -1.0),
-              ( 1.0,  1.0, -1.0),
-              ( 1.0,  1.0,  1.0),
-              (-1.0,  1.0,  1.0),
-              (-1.0,  1.0, -1.0))
-            .into_iter()
-            .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
-            .collect(),
-          tex_vertices:
-            vec!(
-              (1.004952, 0.498633),
-              (0.754996, 0.498236),
-              (0.755393, 0.248279),
-              (1.005349, 0.248677),
-              (0.255083, 0.497442),
-              (0.25548, 0.247485),
-              (0.505437, 0.247882),
-              (0.505039, 0.497839),
-              (0.754598, 0.748193),
-              (0.504642, 0.747795),
-              (0.505834, -0.002074),
-              (0.75579, -0.001677),
-              (0.005127, 0.497044),
-              (0.005524, 0.247088))
-            .into_iter()
-            .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
-            .collect(),
-          normals : vec![],
-          geometry: vec![
-            Geometry {
-              material_name: None,
-              shapes:
-                vec!(
-                  (3,  3, 0,  0, 1,  1, "all"),
-                  (3,  3, 1,  1, 2,  2, "all"),
-                  (5,  7, 4,  4, 7,  5, "all"),
-                  (5,  7, 7,  5, 6,  6, "all"),
-                  (1,  1, 0,  8, 4,  9, "all"),
-                  (1,  1, 4,  9, 5,  7, "all"),
-                  (2,  2, 1,  1, 5,  7, "all"),
-                  (2,  2, 5,  7, 6,  6, "all"),
-                  (3, 11, 2,  2, 6,  6, "all"),
-                  (3, 11, 6,  6, 7, 10, "all"),
-                  (7,  5, 4,  4, 0, 12, "all"),
-                  (7,  5, 0, 12, 3, 13, "all"))
-                .into_iter()
-                .map(|(xv, xt, yv, yt, zv, zt, group)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (xv, Some(xt), None),
-                        (yv, Some(yt), None),
-                        (zv, Some(zt), None)),
-                    groups: vec!(group.into()),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          ]
-        }
+  let expected = ObjSet {
+    material_library: None,
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        (1.0, -1.0, -1.0),
+        (1.0, -1.0, 1.0),
+        (-1.0, -1.0, 1.0),
+        (-1.0, -1.0, -1.0),
+        (1.0, 1.0, -1.0),
+        (1.0, 1.0, 1.0),
+        (-1.0, 1.0, 1.0),
+        (-1.0, 1.0, -1.0),
       ]
-    };
+      .into_iter()
+      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .collect(),
+      tex_vertices: vec![
+        (1.004952, 0.498633),
+        (0.754996, 0.498236),
+        (0.755393, 0.248279),
+        (1.005349, 0.248677),
+        (0.255083, 0.497442),
+        (0.25548, 0.247485),
+        (0.505437, 0.247882),
+        (0.505039, 0.497839),
+        (0.754598, 0.748193),
+        (0.504642, 0.747795),
+        (0.505834, -0.002074),
+        (0.75579, -0.001677),
+        (0.005127, 0.497044),
+        (0.005524, 0.247088),
+      ]
+      .into_iter()
+      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .collect(),
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: None,
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1, "all"),
+          (3, 3, 1, 1, 2, 2, "all"),
+          (5, 7, 4, 4, 7, 5, "all"),
+          (5, 7, 7, 5, 6, 6, "all"),
+          (1, 1, 0, 8, 4, 9, "all"),
+          (1, 1, 4, 9, 5, 7, "all"),
+          (2, 2, 1, 1, 5, 7, "all"),
+          (2, 2, 5, 7, 6, 6, "all"),
+          (3, 11, 2, 2, 6, 6, "all"),
+          (3, 11, 6, 6, 7, 10, "all"),
+          (7, 5, 4, 4, 0, 12, "all"),
+          (7, 5, 0, 12, 3, 13, "all"),
+        ]
+        .into_iter()
+        .map(|(xv, xt, yv, yt, zv, zt, group)| Shape {
+          primitive: Triangle(
+            (xv, Some(xt), None),
+            (yv, Some(yt), None),
+            (zv, Some(zt), None),
+          ),
+          groups: vec![group.into()],
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  };
 
   assert_eq!(parse(input.into()), Ok(expected));
 }
@@ -2302,8 +2207,7 @@ fn issue_54() {
 fn several_groups() {
   use self::Primitive::Triangle;
 
-  let input =
-r#"
+  let input = r#"
 o Cube
 v 1.000000 -1.000000 -1.000000
 v 1.000000 -1.000000 1.000000
@@ -2342,74 +2246,155 @@ g face six
 f 5/5 1/13 4/14 8/6
 "#;
 
-  let expected =
-    ObjSet {
-      material_library: None,
-      objects: vec![
-        Object {
-          name: "Cube".to_owned(),
-          vertices: vec![
-            Vertex { x:  1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z:  1.0 },
-            Vertex { x: -1.0, y: -1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z: -1.0 },
-            Vertex { x:  1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z:  1.0 },
-            Vertex { x: -1.0, y:  1.0, z: -1.0 }
-          ],
-          tex_vertices: vec![
-            TVertex { u: 1.004952, v: 0.498633, w: 0. },
-            TVertex { u: 0.754996, v: 0.498236, w: 0. },
-            TVertex { u: 0.755393, v: 0.248279, w: 0. },
-            TVertex { u: 1.005349, v: 0.248677, w: 0. },
-            TVertex { u: 0.255083, v: 0.497442, w: 0. },
-            TVertex { u: 0.25548, v: 0.247485, w: 0. },
-            TVertex { u: 0.505437, v: 0.247882, w: 0. },
-            TVertex { u: 0.505039, v: 0.497839, w: 0. },
-            TVertex { u: 0.754598, v: 0.748193, w: 0. },
-            TVertex { u: 0.504642, v: 0.747795, w: 0. },
-            TVertex { u: 0.505834, v: -0.002074, w: 0. },
-            TVertex { u: 0.75579, v: -0.001677, w: 0. },
-            TVertex { u: 0.005127, v: 0.497044, w: 0. },
-            TVertex { u: 0.005524, v: 0.247088, w: 0. }
-          ],
-          normals : vec![],
-          geometry: vec![
-            Geometry {
-              material_name: None,
-              shapes:
-                vec!(
-                  (3, 3, 0, 0, 1, 1, vec!("face", "one")),
-                  (3, 3, 1, 1, 2, 2, vec!("face", "one")),
-                  (5, 7, 4, 4, 7, 5, vec!("face", "two")),
-                  (5, 7, 7, 5, 6, 6, vec!("face", "two")),
-                  (1, 1, 0, 8, 4, 9, vec!("face", "three")),
-                  (1, 1, 4, 9, 5, 7, vec!("face", "three")),
-                  (2, 2, 1, 1, 5, 7, vec!("face", "four")),
-                  (2, 2, 5, 7, 6, 6, vec!("face", "four")),
-                  (3, 11, 2, 2, 6, 6, vec!("face", "five")),
-                  (3, 11, 6, 6, 7, 10, vec!("face", "five")),
-                  (7, 5, 4, 4, 0, 12, vec!("face", "six")),
-                  (7, 5, 0, 12, 3, 13, vec!("face", "six"))
-                )
-                .into_iter()
-                .map(|(vx, tx, vy, ty, vz, tz, groups)|
-                  Shape {
-                    primitive:
-                      Triangle(
-                        (vx, Some(tx), None),
-                        (vy, Some(ty), None),
-                        (vz, Some(tz), None)),
-                    groups: groups.into_iter().map(|s| s.into()).collect(),
-                    smoothing_groups: vec!()
-                  })
-                .collect(),
-            }
-          ]
-        }
-      ]
-    };
+  let expected = ObjSet {
+    material_library: None,
+    objects: vec![Object {
+      name: "Cube".to_owned(),
+      vertices: vec![
+        Vertex {
+          x: 1.0,
+          y: -1.0,
+          z: -1.0,
+        },
+        Vertex {
+          x: 1.0,
+          y: -1.0,
+          z: 1.0,
+        },
+        Vertex {
+          x: -1.0,
+          y: -1.0,
+          z: 1.0,
+        },
+        Vertex {
+          x: -1.0,
+          y: -1.0,
+          z: -1.0,
+        },
+        Vertex {
+          x: 1.0,
+          y: 1.0,
+          z: -1.0,
+        },
+        Vertex {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0,
+        },
+        Vertex {
+          x: -1.0,
+          y: 1.0,
+          z: 1.0,
+        },
+        Vertex {
+          x: -1.0,
+          y: 1.0,
+          z: -1.0,
+        },
+      ],
+      tex_vertices: vec![
+        TVertex {
+          u: 1.004952,
+          v: 0.498633,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.754996,
+          v: 0.498236,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.755393,
+          v: 0.248279,
+          w: 0.,
+        },
+        TVertex {
+          u: 1.005349,
+          v: 0.248677,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.255083,
+          v: 0.497442,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.25548,
+          v: 0.247485,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.505437,
+          v: 0.247882,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.505039,
+          v: 0.497839,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.754598,
+          v: 0.748193,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.504642,
+          v: 0.747795,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.505834,
+          v: -0.002074,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.75579,
+          v: -0.001677,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.005127,
+          v: 0.497044,
+          w: 0.,
+        },
+        TVertex {
+          u: 0.005524,
+          v: 0.247088,
+          w: 0.,
+        },
+      ],
+      normals: vec![],
+      geometry: vec![Geometry {
+        material_name: None,
+        shapes: vec![
+          (3, 3, 0, 0, 1, 1, vec!["face", "one"]),
+          (3, 3, 1, 1, 2, 2, vec!["face", "one"]),
+          (5, 7, 4, 4, 7, 5, vec!["face", "two"]),
+          (5, 7, 7, 5, 6, 6, vec!["face", "two"]),
+          (1, 1, 0, 8, 4, 9, vec!["face", "three"]),
+          (1, 1, 4, 9, 5, 7, vec!["face", "three"]),
+          (2, 2, 1, 1, 5, 7, vec!["face", "four"]),
+          (2, 2, 5, 7, 6, 6, vec!["face", "four"]),
+          (3, 11, 2, 2, 6, 6, vec!["face", "five"]),
+          (3, 11, 6, 6, 7, 10, vec!["face", "five"]),
+          (7, 5, 4, 4, 0, 12, vec!["face", "six"]),
+          (7, 5, 0, 12, 3, 13, vec!["face", "six"]),
+        ]
+        .into_iter()
+        .map(|(vx, tx, vy, ty, vz, tz, groups)| Shape {
+          primitive: Triangle(
+            (vx, Some(tx), None),
+            (vy, Some(ty), None),
+            (vz, Some(tz), None),
+          ),
+          groups: groups.into_iter().map(|s| s.into()).collect(),
+          smoothing_groups: vec![],
+        })
+        .collect(),
+      }],
+    }],
+  };
 
   assert_eq!(parse(input.into()), Ok(expected));
 }
