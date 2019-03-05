@@ -1,8 +1,8 @@
 //! A parser for Wavefront's `.obj` file format for storing 3D meshes.
+use lex::PeekableLexer;
 use std::borrow::ToOwned;
 use std::cmp::Ordering;
 use std::cmp::Ordering::{Equal, Greater, Less};
-use std::iter;
 use std::mem;
 
 use lex::{Lexer, ParseError};
@@ -164,11 +164,6 @@ pub type NormalIndex = usize;
 /// be textured.
 pub type VTNIndex = (VertexIndex, Option<TextureIndex>, Option<NormalIndex>);
 
-/// Slices the underlying string in an option.
-fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
-  s.as_ref().map(|s| &s[..])
-}
-
 /// Blender exports primitives as a list of the vertices representing their corners.
 /// This function turns that into a set of OpenGL-usable shapes - i.e. points,
 /// lines, or triangles.
@@ -242,14 +237,14 @@ fn test_to_triangles() {
 #[derive(Clone)]
 struct Parser<'a> {
   line_number: usize,
-  lexer: iter::Peekable<Lexer<'a>>,
+  lexer: PeekableLexer<'a>,
 }
 
 impl<'a> Parser<'a> {
   fn new(input: &'a str) -> Parser<'a> {
     Parser {
       line_number: 1,
-      lexer: Lexer::new(input).peekable(),
+      lexer: PeekableLexer::new(Lexer::new(input)),
     }
   }
 
@@ -260,13 +255,8 @@ impl<'a> Parser<'a> {
     })
   }
 
-  fn next(&mut self) -> Option<String> {
-    // TODO(cgaebel): This has a lot of useless allocations. Techincally we can
-    // just be using slices into the underlying buffer instead of allocating a
-    // new string for every single token. Unfortunately, I'm not sure how to
-    // structure this to appease the borrow checker.
-    let ret = self.lexer.next();
-
+  fn next(&mut self) -> Option<&'a str> {
+    let ret = self.lexer.next_str();
     match ret {
       None => {}
       Some(ref s) => {
@@ -283,9 +273,8 @@ impl<'a> Parser<'a> {
     self.next();
   }
 
-  fn peek(&mut self) -> Option<String> {
-    // TODO(cgaebel): See the comment in `next`.
-    self.lexer.peek().map(|s| s.clone())
+  fn peek(&mut self) -> Option<&'a str> {
+    self.lexer.peek_str()
   }
 
   /// Take a parser function and try to parse with it. If the parser fails, `None` is returned and
@@ -312,7 +301,7 @@ impl<'a> Parser<'a> {
   /// Possibly skips over some newlines.
   fn zero_or_more_newlines(&mut self) {
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         None => break,
         Some("\n") => {}
         Some(_) => break,
@@ -323,7 +312,7 @@ impl<'a> Parser<'a> {
 
   /// Parse just a constant string.
   fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       None => return self.error(format!("Expected `{}` but got end of input.", tag)),
       Some(s) => {
         if s != tag {
@@ -342,7 +331,7 @@ impl<'a> Parser<'a> {
     Ok(())
   }
 
-  fn parse_str(&mut self) -> Result<String, ParseError> {
+  fn parse_str(&mut self) -> Result<&'a str, ParseError> {
     match self.next() {
       None => self.error(format!("Expected string but got end of input.")),
       Some(got) => {
@@ -355,8 +344,8 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_material_library(&mut self) -> Result<Option<String>, ParseError> {
-    match sliced(&self.peek()) {
+  fn parse_material_library(&mut self) -> Result<Option<&'a str>, ParseError> {
+    match self.peek() {
       Some("mtllib") => {}
       _ => return Ok(None),
     }
@@ -364,15 +353,15 @@ impl<'a> Parser<'a> {
     self.parse_str().map(Some)
   }
 
-  fn parse_object_name(&mut self) -> Result<String, ParseError> {
-    match sliced(&self.peek()) {
+  fn parse_object_name(&mut self) -> Result<&'a str, ParseError> {
+    match self.peek() {
       Some("o") => {
         try!(self.parse_tag("o"));
         let name = self.parse_str();
         try!(self.one_or_more_newlines());
         name
       }
-      _ => Ok(String::new()),
+      _ => Ok(""),
     }
   }
 
@@ -420,7 +409,7 @@ impl<'a> Parser<'a> {
     Ok(Normal { x: x, y: y, z: z })
   }
 
-  fn parse_usemtl(&mut self) -> Result<String, ParseError> {
+  fn parse_usemtl(&mut self) -> Result<&'a str, ParseError> {
     try!(self.parse_tag("usemtl"));
     self.parse_str()
   }
@@ -447,40 +436,42 @@ impl<'a> Parser<'a> {
     valid_tx: (usize, usize),
     valid_nx: (usize, usize),
   ) -> Result<VTNIndex, ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       None => return self.error("Expected vertex index but got end of input.".to_owned()),
       Some(s) => {
-        let splits: Vec<&str> = s.split('/').collect();
-        assert!(splits.len() != 0);
-
-        match splits.len() {
+        let mut splits = s.split('/');
+        match splits.clone().count() {
           1 => {
-            let v_idx = try!(self.parse_isize_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
             Ok((v_idx, None, None))
           }
           2 => {
-            let v_idx = try!(self.parse_isize_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            let t_idx = try!(self.parse_isize_from(splits[1]));
+            let t_idx = try!(self.parse_isize_from(splits.next().unwrap()));
             let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
             Ok((v_idx, Some(t_idx), None))
           }
           3 => {
-            let v_idx = try!(self.parse_isize_from(splits[0]));
+            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
             let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            let t_idx_opt = if splits[1].len() == 0 {
+            let split = splits.next().unwrap();
+            let t_idx_opt = if split.len() == 0 {
               None
             } else {
-              let t_idx = try!(self.parse_isize_from(splits[1]));
+              let t_idx = try!(self.parse_isize_from(split));
               let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
               Some(t_idx)
             };
-            let n_idx = try!(self.parse_isize_from(splits[2]));
+            let n_idx = try!(self.parse_isize_from(splits.next().unwrap()));
             let n_idx = try!(self.check_valid_index(valid_nx, n_idx));
             Ok((v_idx, t_idx_opt, Some(n_idx)))
           }
-          n => self.error(format!("Expected at most 2 vertex indexes but got {}.", n)),
+          n => self.error(format!(
+            "Expected at least 1 and at most 3 vertex indexes but got {}.",
+            n
+          )),
         }
       }
     }
@@ -520,7 +511,7 @@ impl<'a> Parser<'a> {
     current_groups: &Vec<GroupName>,
     current_smoothing_groups: &Vec<u32>,
   ) -> Result<Vec<Shape>, ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       Some("f") => {}
       Some("l") => {}
       None => return self.error("Expected `f` or `l` but got end of input.".to_owned()),
@@ -532,7 +523,7 @@ impl<'a> Parser<'a> {
     corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx)));
 
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         None => break,
         Some("\n") => break,
         Some(_) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx))),
@@ -565,12 +556,12 @@ impl<'a> Parser<'a> {
     let mut current_smoothing_groups = Vec::new();
 
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         Some("usemtl") => {
           let old_material = mem::replace(&mut current_material, Some(try!(self.parse_usemtl())));
 
           result.push(Geometry {
-            material_name: old_material,
+            material_name: old_material.map(|s| s.to_owned()),
             shapes: mem::replace(&mut shapes, Vec::new()),
           });
         }
@@ -602,7 +593,7 @@ impl<'a> Parser<'a> {
     }
 
     result.push(Geometry {
-      material_name: current_material,
+      material_name: current_material.map(|s| s.to_owned()),
       shapes: shapes,
     });
 
@@ -659,7 +650,7 @@ impl<'a> Parser<'a> {
     *min_normal_index += normals.len();
 
     Ok(Object {
-      name: name,
+      name: name.to_owned(),
       vertices: vertices,
       tex_vertices: tex_vertices,
       normals: normals,
@@ -678,7 +669,7 @@ impl<'a> Parser<'a> {
     let mut max_normal_index = 1;
 
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         Some(_) => {
           result.push(try!(self.parse_object(
             &mut min_vertex_index,
@@ -717,7 +708,7 @@ impl<'a> Parser<'a> {
     }
 
     Ok(ObjSet {
-      material_library: material_library,
+      material_library: material_library.map(|s| s.to_owned()),
       objects: objects,
     })
   }
@@ -728,12 +719,12 @@ impl<'a> Parser<'a> {
     loop {
       // ends the list of group names
       // g without any name is valid and means default group
-      if let Some("\n") = sliced(&self.peek()) {
+      if let Some("\n") = self.peek() {
         break;
       }
 
       let name = try!(self.parse_str());
-      groups.push(name);
+      groups.push(name.to_owned());
     }
 
     Ok(groups)
@@ -747,7 +738,7 @@ impl<'a> Parser<'a> {
         let group = try!(self.parse_u32());
         groups.push(group);
 
-        if let Some("\n") = sliced(&self.peek()) {
+        if let Some("\n") = self.peek() {
           break;
         }
       }

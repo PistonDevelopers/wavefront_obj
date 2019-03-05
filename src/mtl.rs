@@ -3,10 +3,9 @@
 use std::borrow::ToOwned;
 use std::cmp::Ordering;
 use std::cmp::Ordering::{Equal, Greater, Less};
-use std::iter;
 
-use lex::Lexer;
 pub use lex::ParseError;
+use lex::{Lexer, PeekableLexer};
 use util::OrderingExt;
 
 /// A set of materials in one `.mtl` file.
@@ -130,24 +129,16 @@ impl PartialOrd for Material {
   }
 }
 
-/// Slices the underlying string in an option.
-fn sliced<'a>(s: &'a Option<String>) -> Option<&'a str> {
-  match *s {
-    None => None,
-    Some(ref s) => Some(&s[..]),
-  }
-}
-
 struct Parser<'a> {
   line_number: usize,
-  lexer: iter::Peekable<Lexer<'a>>,
+  lexer: PeekableLexer<'a>,
 }
 
 impl<'a> Parser<'a> {
   fn new(input: &'a str) -> Parser<'a> {
     Parser {
       line_number: 1,
-      lexer: Lexer::new(input).peekable(),
+      lexer: PeekableLexer::new(Lexer::new(input)),
     }
   }
 
@@ -158,12 +149,8 @@ impl<'a> Parser<'a> {
     })
   }
 
-  fn next(&mut self) -> Option<String> {
-    // TODO(cgaebel): This has a lot of useless allocations. Techincally we can
-    // just be using slices into the underlying buffer instead of allocating a
-    // new string for every single token. Unfortunately, I'm not sure how to
-    // structure this to appease the borrow checker.
-    let ret = self.lexer.next();
+  fn next(&mut self) -> Option<&'a str> {
+    let ret = self.lexer.next_str();
 
     match ret {
       None => {}
@@ -181,15 +168,15 @@ impl<'a> Parser<'a> {
     self.next();
   }
 
-  fn peek(&mut self) -> Option<String> {
+  fn peek(&mut self) -> Option<&'a str> {
     // TODO(cgaebel): See the comment in `next`.
-    self.lexer.peek().map(|s| s.clone())
+    self.lexer.peek_str()
   }
 
   /// Possibly skips over some newlines.
   fn zero_or_more_newlines(&mut self) {
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         None => break,
         Some("\n") => {}
         Some(_) => break,
@@ -199,7 +186,7 @@ impl<'a> Parser<'a> {
   }
   /// Skips over some newlines, failing if it didn't manage to skip any.
   fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
-    match sliced(&self.peek()) {
+    match self.peek() {
       None => return self.error("Expected newline but got end of input.".to_owned()),
       Some("\n") => {}
       Some(s) => return self.error(format!("Expected newline but got {}", s)),
@@ -210,8 +197,8 @@ impl<'a> Parser<'a> {
     Ok(())
   }
 
-  fn parse_newmtl(&mut self) -> Result<String, ParseError> {
-    match sliced(&self.next()) {
+  fn parse_newmtl(&mut self) -> Result<&'a str, ParseError> {
+    match self.next() {
       None => return self.error("Expected `newmtl` but got end of input.".to_owned()),
       Some("newmtl") => {}
       Some(s) => return self.error(format!("Expected `newmtl` but got {}.", s)),
@@ -224,7 +211,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_f64(&mut self) -> Result<f64, ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       None => return self.error("Expected f64 but got end of input.".to_owned()),
       Some(s) => match lexical::try_parse(&s) {
         Err(_err) => return self.error(format!("Expected f64 but got {}.", s)),
@@ -234,7 +221,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_usize(&mut self) -> Result<usize, ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       None => return self.error("Expected usize but got end of input.".to_owned()),
       Some(s) => match lexical::try_parse(&s) {
         Err(_err) => return self.error(format!("Expected usize but got {}.", s)),
@@ -244,7 +231,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
-    match sliced(&self.next()) {
+    match self.next() {
       None => return self.error(format!("Expected `{}` but got end of input.", tag)),
       Some(s) => {
         if s != tag {
@@ -285,7 +272,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_emissive_color(&mut self) -> Result<Option<Color>, ParseError> {
-    if sliced(&self.peek()) != Some("Ke") {
+    if self.peek() != Some("Ke") {
       return Ok(None);
     }
     try!(self.parse_tag("Ke"));
@@ -293,7 +280,7 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_optical_density(&mut self) -> Result<Option<f64>, ParseError> {
-    match sliced(&self.peek()) {
+    match self.peek() {
       Some("Ni") => {}
       _ => return Ok(None),
     }
@@ -318,8 +305,8 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_uv_map(&mut self) -> Result<Option<String>, ParseError> {
-    match sliced(&self.peek()) {
+  fn parse_uv_map(&mut self) -> Result<Option<&'a str>, ParseError> {
+    match self.peek() {
       Some("map_Kd") => {}
       _ => return Ok(None),
     }
@@ -360,7 +347,7 @@ impl<'a> Parser<'a> {
     }
 
     Ok(Material {
-      name: name,
+      name: name.to_owned(),
       specular_coefficient: spec_coeff,
       color_ambient: amb,
       color_diffuse: diff,
@@ -369,7 +356,7 @@ impl<'a> Parser<'a> {
       optical_density: optical_density,
       alpha: dissolve,
       illumination: illum,
-      uv_map: uv_map,
+      uv_map: uv_map.map(|s| s.to_owned()),
     })
   }
 
@@ -379,7 +366,7 @@ impl<'a> Parser<'a> {
     let mut ret = Vec::new();
 
     loop {
-      match sliced(&self.peek()) {
+      match self.peek() {
         Some("newmtl") => {
           ret.push(try!(self.parse_material()));
         }
