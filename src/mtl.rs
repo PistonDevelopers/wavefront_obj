@@ -169,7 +169,6 @@ impl<'a> Parser<'a> {
   }
 
   fn peek(&mut self) -> Option<&'a str> {
-    // TODO(cgaebel): See the comment in `next`.
     self.lexer.peek_str()
   }
 
@@ -187,7 +186,7 @@ impl<'a> Parser<'a> {
   /// Skips over some newlines, failing if it didn't manage to skip any.
   fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
     match self.peek() {
-      None => return self.error("Expected newline but got end of input.".to_owned()),
+      None => {} // allow eof
       Some("\n") => {}
       Some(s) => return self.error(format!("Expected newline but got {}", s)),
     }
@@ -388,9 +387,8 @@ impl<'a> Parser<'a> {
 /// best-effort and realistically I will only end up supporting the subset
 /// of the file format which falls under the "shit I see exported from blender"
 /// category.
-pub fn parse(mut input: String) -> Result<MtlSet, ParseError> {
-  input.push_str("\n");
-  Parser::new(&input[..]).parse_mtlset()
+pub fn parse<S: AsRef<str>>(input: S) -> Result<MtlSet, ParseError> {
+  Parser::new(input.as_ref()).parse_mtlset()
 }
 
 #[test]
@@ -429,9 +427,7 @@ Kd 0.8 0.8 0.8
 # specular
 Ks 0.8 0.8 0.8
 d 1
-illum 2
-
-"#;
+illum 2"#;
 
   let expected = Ok(MtlSet {
     materials: vec![
@@ -490,7 +486,7 @@ illum 2
     ],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -544,5 +540,5 @@ map_Kd cube-uv-num.png
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }

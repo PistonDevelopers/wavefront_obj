@@ -324,9 +324,22 @@ impl<'a> Parser<'a> {
     return Ok(());
   }
 
+  fn parse_tag_or_eof(&mut self, tag: &str) -> Result<(), ParseError> {
+    match self.next() {
+      None => {}
+      Some(s) => {
+        if s != tag {
+          return self.error(format!("Expected `{}` or EOF but got {}.", tag, s));
+        }
+      }
+    }
+
+    return Ok(());
+  }
+
   /// Skips over some newlines, failing if it didn't manage to skip any.
   fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
-    try!(self.parse_tag("\n"));
+    try!(self.parse_tag_or_eof("\n"));
     self.zero_or_more_newlines();
     Ok(())
   }
@@ -368,7 +381,7 @@ impl<'a> Parser<'a> {
   // TODO(cgaebel): Should this be returning `num::rational::BigRational` instead?
   // I can't think of a good reason to do this except to make testing easier.
   fn parse_double(&mut self) -> Result<f64, ParseError> {
-    let s = try!(self.parse_str());
+    let s = self.parse_str()?;
 
     match lexical::try_parse(&s) {
       Err(_err) => self.error(format!("Expected f64 but got {}.", s)),
@@ -414,7 +427,8 @@ impl<'a> Parser<'a> {
     self.parse_str()
   }
 
-  fn parse_isize_from(&mut self, s: &str) -> Result<isize, ParseError> {
+  #[inline]
+  fn parse_isize_from(&self, s: &str) -> Result<isize, ParseError> {
     match lexical::try_parse(&s) {
       Err(_err) => return self.error(format!("Expected isize but got {}.", s)),
       Ok(ret) => Ok(ret),
@@ -439,45 +453,43 @@ impl<'a> Parser<'a> {
     match self.next() {
       None => return self.error("Expected vertex index but got end of input.".to_owned()),
       Some(s) => {
-        let mut splits = s.split('/');
-        match splits.clone().count() {
-          1 => {
-            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
-            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            Ok((v_idx, None, None))
-          }
-          2 => {
-            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
-            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            let t_idx = try!(self.parse_isize_from(splits.next().unwrap()));
-            let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
-            Ok((v_idx, Some(t_idx), None))
-          }
-          3 => {
-            let v_idx = try!(self.parse_isize_from(splits.next().unwrap()));
-            let v_idx = try!(self.check_valid_index(valid_vtx, v_idx));
-            let split = splits.next().unwrap();
-            let t_idx_opt = if split.len() == 0 {
-              None
+        let process_split =
+          |split: &str, valid_range: (usize, usize)| -> Result<Option<usize>, ParseError> {
+            if split.len() > 0 {
+              Ok(Some(self.check_valid_index(
+                valid_range,
+                self.parse_isize_from(split)?,
+              )?))
             } else {
-              let t_idx = try!(self.parse_isize_from(split));
-              let t_idx = try!(self.check_valid_index(valid_tx, t_idx));
-              Some(t_idx)
-            };
-            let n_idx = try!(self.parse_isize_from(splits.next().unwrap()));
-            let n_idx = try!(self.check_valid_index(valid_nx, n_idx));
-            Ok((v_idx, t_idx_opt, Some(n_idx)))
-          }
-          n => self.error(format!(
-            "Expected at least 1 and at most 3 vertex indexes but got {}.",
-            n
-          )),
+              Ok(None)
+            }
+          };
+
+        let mut splits_iter = s.split('/');
+        let split1 = splits_iter
+          .next()
+          .and_then(|s| process_split(&s, valid_vtx).transpose())
+          .transpose()?;
+        let split2 = splits_iter
+          .next()
+          .and_then(|s| process_split(&s, valid_tx).transpose())
+          .transpose()?;
+        let split3 = splits_iter
+          .next()
+          .and_then(|s| process_split(&s, valid_nx).transpose())
+          .transpose()?;
+
+        if split1.is_none() || splits_iter.next().is_some() {
+          self.error(format!("Expected at least 1 and at most 3 vertex indexes."))
+        } else {
+          Ok((split1.unwrap(), split2, split3))
         }
       }
     }
   }
 
   /// `valid_values` is a range of valid bounds for the actual value.
+  #[inline(always)]
   fn check_valid_index(
     &self,
     valid_values: (usize, usize),
@@ -493,7 +505,7 @@ impl<'a> Parser<'a> {
     }
 
     if x >= min as isize && x < max as isize {
-      assert!(x > 0);
+      debug_assert!(x > 0);
       Ok((x - min as isize) as usize)
     } else {
       self.error(format!(
@@ -854,8 +866,7 @@ f 45 48 47 46
 f 41 45 46 42
 f 42 46 47 43
 f 43 47 48 44
-f 45 41 44 48
-"#;
+f 45 41 44 48"#;
 
   let expected = Ok(ObjSet {
     material_library: Some("untitled.mtl".to_owned()),
@@ -1037,7 +1048,7 @@ f 45 41 44 48
     ],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1078,8 +1089,7 @@ f 5/5 8/6 7/7 6/8
 f 1/9 5/10 6/8 2/2
 f 2/2 6/8 7/7 3/3
 f 3/3 7/7 8/11 4/12
-f 5/5 1/13 4/14 8/6
-"#;
+f 5/5 1/13 4/14 8/6"#;
 
   let expected = Ok(ObjSet {
     material_library: Some("cube.mtl".to_owned()),
@@ -1153,7 +1163,7 @@ f 5/5 1/13 4/14 8/6
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1193,8 +1203,7 @@ f 5/5 8/6 7/7 6/8
 f 1/9 5/10 6/8 2/2
 f 2/2 6/8 7/7 3/3
 f 3/3 7/7 8/11 4/12
-f 5/5 1/13 4/14 8/6
-"#;
+f 5/5 1/13 4/14 8/6"#;
 
   let expected = Ok(ObjSet {
     material_library: Some("cube.mtl".to_owned()),
@@ -1268,7 +1277,7 @@ f 5/5 1/13 4/14 8/6
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1309,8 +1318,7 @@ f 5/5 8/6 7/7 6/8
 f 1/9 5/10 6/8 2/2
 f 2/2 6/8 7/7 3/3
 f 3/3 7/7 8/11 4/12
-f 5/5 1/13 4/14 8/6
-"#;
+f 5/5 1/13 4/14 8/6"#;
 
   let expected = Ok(ObjSet {
     material_library: Some("cube.mtl".to_owned()),
@@ -1372,7 +1380,7 @@ f 5/5 1/13 4/14 8/6
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1488,7 +1496,7 @@ f 5/5 1/13 4/14 8/6
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1733,7 +1741,7 @@ f 3//32 2//32 4//32
       }],
     }],
   });
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -1966,7 +1974,7 @@ f 21 33 12
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -2076,7 +2084,7 @@ f 5/5 1/13 4/14 8/6
     }],
   });
 
-  assert_eq!(parse(test_case.to_owned()), expected);
+  assert_eq!(parse(test_case), expected);
 }
 
 #[test]
@@ -2185,13 +2193,13 @@ f 5/5 1/13 4/14 8/6
     }],
   };
 
-  assert_eq!(parse(input.into()), Ok(expected));
+  assert_eq!(parse(input), Ok(expected));
 }
 
 #[test]
 fn issue_54() {
   let input = include_str!("issue_54.obj");
-  let _ = parse(input.into());
+  let _ = parse(input);
 }
 
 #[test]
@@ -2234,8 +2242,7 @@ f 2/2 6/8 7/7 3/3
 g face five
 f 3/3 7/7 8/11 4/12
 g face six
-f 5/5 1/13 4/14 8/6
-"#;
+f 5/5 1/13 4/14 8/6"#;
 
   let expected = ObjSet {
     material_library: None,
@@ -2387,7 +2394,7 @@ f 5/5 1/13 4/14 8/6
     }],
   };
 
-  assert_eq!(parse(input.into()), Ok(expected));
+  assert_eq!(parse(input), Ok(expected));
 }
 
 /// Parses a wavefront `.obj` file, returning either the successfully parsed
@@ -2395,9 +2402,6 @@ f 5/5 1/13 4/14 8/6
 /// best-effort and realistically I will only end up supporting the subset
 /// of the file format which falls under the "things I see exported from blender"
 /// category.
-pub fn parse(mut input: String) -> Result<ObjSet, ParseError> {
-  // Unfortunately, the parser requires a trailing newline. This is the easiest
-  // way I could find to allow non-trailing newlines.
-  input.push_str("\n");
-  Parser::new(&input).parse_objset()
+pub fn parse<S: AsRef<str>>(input: S) -> Result<ObjSet, ParseError> {
+  Parser::new(input.as_ref()).parse_objset()
 }
