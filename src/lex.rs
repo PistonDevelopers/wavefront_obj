@@ -37,11 +37,8 @@ impl<'a> Lexer<'a> {
 
   /// Advance the lexer by one character.
   fn advance(&mut self) {
-    match self.peek() {
-      Some(&c) if c == b'\n' => {
-        self.current_line_number += 1;
-      }
-      _ => {}
+    if let Some(b'\n') = self.peek() {
+      self.current_line_number += 1;
     }
     self.read_pos += 1;
   }
@@ -115,11 +112,11 @@ impl<'a> Lexer<'a> {
     match self.peek() {
       Some(b'\n') => {
         self.advance();
-        Some(&self.bytes[start_ptr..self.read_pos]) // newline
+        self.bytes.get(start_ptr..self.read_pos) // newline
       }
       Some(_) => {
         if self.skip_unless(|c| is_whitespace(c) || c == b'#') {
-          Some(&self.bytes[start_ptr..self.read_pos])
+          self.bytes.get(start_ptr..self.read_pos)
         } else {
           None
         }

@@ -248,24 +248,22 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn error<A>(&self, msg: String) -> Result<A, ParseError> {
-    Err(ParseError {
+  fn error_raw(&self, msg: String) -> ParseError {
+    ParseError {
       line_number: self.line_number,
       message: msg,
-    })
+    }
+  }
+
+  fn error<A>(&self, msg: String) -> Result<A, ParseError> {
+    Err(self.error_raw(msg))
   }
 
   fn next(&mut self) -> Option<&'a str> {
     let ret = self.lexer.next_str();
-    match ret {
-      None => {}
-      Some(ref s) => {
-        if *s == "\n" {
-          self.line_number += 1;
-        }
-      }
+    if let Some("\n") = ret {
+      self.line_number += 1;
     }
-
     ret
   }
 
@@ -300,46 +298,30 @@ impl<'a> Parser<'a> {
 
   /// Possibly skips over some newlines.
   fn zero_or_more_newlines(&mut self) {
-    loop {
-      match self.peek() {
-        None => break,
-        Some("\n") => {}
-        Some(_) => break,
-      }
-      self.advance();
+    while let Some("\n") = self.peek() {
+      self.advance()
     }
   }
 
   /// Parse just a constant string.
   fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
     match self.next() {
-      None => return self.error(format!("Expected `{}` but got end of input.", tag)),
-      Some(s) => {
-        if s != tag {
-          return self.error(format!("Expected `{}` but got {}.", tag, s));
-        }
-      }
+      None => self.error(format!("Expected `{}` but got end of input.", tag)),
+      Some(s) if s != tag => self.error(format!("Expected `{}` but got {}.", tag, s)),
+      _ => Ok(()),
     }
-
-    return Ok(());
   }
 
   fn parse_tag_or_eof(&mut self, tag: &str) -> Result<(), ParseError> {
     match self.next() {
-      None => {}
-      Some(s) => {
-        if s != tag {
-          return self.error(format!("Expected `{}` or EOF but got {}.", tag, s));
-        }
-      }
+      Some(s) if s != tag => self.error(format!("Expected `{}` or EOF but got {}.", tag, s)),
+      _ => Ok(()),
     }
-
-    return Ok(());
   }
 
   /// Skips over some newlines, failing if it didn't manage to skip any.
   fn one_or_more_newlines(&mut self) -> Result<(), ParseError> {
-    try!(self.parse_tag_or_eof("\n"));
+    self.parse_tag_or_eof("\n")?;
     self.zero_or_more_newlines();
     Ok(())
   }
@@ -347,13 +329,8 @@ impl<'a> Parser<'a> {
   fn parse_str(&mut self) -> Result<&'a str, ParseError> {
     match self.next() {
       None => self.error(format!("Expected string but got end of input.")),
-      Some(got) => {
-        if got == "\n" {
-          self.error(format!("Expected string but got `end of line`."))
-        } else {
-          Ok(got)
-        }
-      }
+      Some("\n") => self.error(format!("Expected string but got `end of line`.")),
+      Some(got) => Ok(got),
     }
   }
 
@@ -369,9 +346,9 @@ impl<'a> Parser<'a> {
   fn parse_object_name(&mut self) -> Result<&'a str, ParseError> {
     match self.peek() {
       Some("o") => {
-        try!(self.parse_tag("o"));
+        self.parse_tag("o")?;
         let name = self.parse_str();
-        try!(self.one_or_more_newlines());
+        self.one_or_more_newlines()?;
         name
       }
       _ => Ok(""),
@@ -382,26 +359,22 @@ impl<'a> Parser<'a> {
   // I can't think of a good reason to do this except to make testing easier.
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = self.parse_str()?;
-
-    match lexical::try_parse(&s) {
-      Err(_err) => self.error(format!("Expected f64 but got {}.", s)),
-      Ok(ret) => Ok(ret),
-    }
+    lexical::try_parse(s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
   }
 
   fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
-    try!(self.parse_tag("v"));
+    self.parse_tag("v")?;
 
-    let x = try!(self.parse_double());
-    let y = try!(self.parse_double());
-    let z = try!(self.parse_double());
+    let x = self.parse_double()?;
+    let y = self.parse_double()?;
+    let z = self.parse_double()?;
 
     Ok(Vertex { x: x, y: y, z: z })
   }
 
   fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
-    try!(self.parse_tag("vt"));
-    let u = try!(self.parse_double());
+    self.parse_tag("vt")?;
+    let u = self.parse_double()?;
 
     match self.try(Self::parse_double) {
       Some(v) => {
@@ -413,35 +386,28 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_normal(&mut self) -> Result<Normal, ParseError> {
-    try!(self.parse_tag("vn"));
+    self.parse_tag("vn")?;
 
-    let x = try!(self.parse_double());
-    let y = try!(self.parse_double());
-    let z = try!(self.parse_double());
+    let x = self.parse_double()?;
+    let y = self.parse_double()?;
+    let z = self.parse_double()?;
 
     Ok(Normal { x: x, y: y, z: z })
   }
 
   fn parse_usemtl(&mut self) -> Result<&'a str, ParseError> {
-    try!(self.parse_tag("usemtl"));
+    self.parse_tag("usemtl")?;
     self.parse_str()
   }
 
   #[inline]
   fn parse_isize_from(&self, s: &str) -> Result<isize, ParseError> {
-    match lexical::try_parse(&s) {
-      Err(_err) => return self.error(format!("Expected isize but got {}.", s)),
-      Ok(ret) => Ok(ret),
-    }
+    lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected isize but got {}.", s)))
   }
 
   fn parse_u32(&mut self) -> Result<u32, ParseError> {
-    let s = try!(self.parse_str());
-
-    match lexical::try_parse(&s) {
-      Err(_) => return self.error(format!("Expected u32 but got {}.", s)),
-      Ok(a) => Ok(a),
-    }
+    let s = self.parse_str()?;
+    lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected u32 but got {}.", s)))
   }
 
   fn parse_vtindex(
@@ -532,13 +498,13 @@ impl<'a> Parser<'a> {
 
     let mut corner_list = Vec::new();
 
-    corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx)));
+    corner_list.push(self.parse_vtindex(valid_vtx, valid_tx, valid_nx)?);
 
     loop {
       match self.peek() {
         None => break,
         Some("\n") => break,
-        Some(_) => corner_list.push(try!(self.parse_vtindex(valid_vtx, valid_tx, valid_nx))),
+        Some(_) => corner_list.push(self.parse_vtindex(valid_vtx, valid_tx, valid_nx)?),
       }
     }
 
@@ -570,7 +536,7 @@ impl<'a> Parser<'a> {
     loop {
       match self.peek() {
         Some("usemtl") => {
-          let old_material = mem::replace(&mut current_material, Some(try!(self.parse_usemtl())));
+          let old_material = mem::replace(&mut current_material, Some(self.parse_usemtl()?));
 
           result.push(Geometry {
             material_name: old_material.map(|s| s.to_owned()),
@@ -579,29 +545,30 @@ impl<'a> Parser<'a> {
         }
         Some("s") => {
           self.advance();
-          current_smoothing_groups = try!(self.parse_smoothing_groups());
+          current_smoothing_groups = self.parse_smoothing_groups()?;
         }
         Some("f") | Some("l") => {
           shapes.extend(
-            try!(self.parse_face(
-              valid_vtx,
-              valid_tx,
-              valid_nx,
-              &current_groups,
-              &current_smoothing_groups
-            ))
-            .into_iter(),
+            self
+              .parse_face(
+                valid_vtx,
+                valid_tx,
+                valid_nx,
+                &current_groups,
+                &current_smoothing_groups,
+              )?
+              .into_iter(),
           );
         }
         Some("g") => {
           self.advance();
-          let names = try!(self.parse_groups());
+          let names = self.parse_groups()?;
           current_groups = names;
         }
         _ => break,
       }
 
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
 
     result.push(Geometry {
@@ -626,7 +593,7 @@ impl<'a> Parser<'a> {
     min_normal_index: &mut usize,
     max_normal_index: &mut usize,
   ) -> Result<Object, ParseError> {
-    let name = try!(self.parse_object_name());
+    let name = self.parse_object_name()?;
 
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
@@ -644,18 +611,18 @@ impl<'a> Parser<'a> {
         break;
       }
 
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
 
     *max_vertex_index += vertices.len();
     *max_tex_index += tex_vertices.len();
     *max_normal_index += normals.len();
 
-    let geometry = try!(self.parse_geometries(
+    let geometry = self.parse_geometries(
       (*min_vertex_index, *max_vertex_index),
       (*min_tex_index, *max_tex_index),
-      (*min_normal_index, *max_normal_index)
-    ));
+      (*min_normal_index, *max_normal_index),
+    )?;
 
     *min_vertex_index += vertices.len();
     *min_tex_index += tex_vertices.len();
@@ -683,14 +650,14 @@ impl<'a> Parser<'a> {
     loop {
       match self.peek() {
         Some(_) => {
-          result.push(try!(self.parse_object(
+          result.push(self.parse_object(
             &mut min_vertex_index,
             &mut max_vertex_index,
             &mut min_tex_index,
             &mut max_tex_index,
             &mut min_normal_index,
-            &mut max_normal_index
-          )));
+            &mut max_normal_index,
+          )?);
         }
         None => break,
       }
@@ -704,19 +671,18 @@ impl<'a> Parser<'a> {
   fn parse_objset(&mut self) -> Result<ObjSet, ParseError> {
     self.zero_or_more_newlines();
 
-    let material_library = try!(self.parse_material_library());
+    let material_library = self.parse_material_library()?;
 
     if material_library.is_some() {
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
 
-    let objects = try!(self.parse_objects());
+    let objects = self.parse_objects()?;
 
     self.zero_or_more_newlines();
 
-    match self.peek() {
-      None => {}
-      Some(s) => return self.error(format!("Expected end of input but got {}.", s)),
+    if let Some(s) = self.peek() {
+      return self.error(format!("Expected end of input but got {}.", s));
     }
 
     Ok(ObjSet {
@@ -735,7 +701,7 @@ impl<'a> Parser<'a> {
         break;
       }
 
-      let name = try!(self.parse_str());
+      let name = self.parse_str()?;
       groups.push(name.to_owned());
     }
 
@@ -747,7 +713,7 @@ impl<'a> Parser<'a> {
 
     if self.try(|p| p.parse_tag("off")).is_none() {
       loop {
-        let group = try!(self.parse_u32());
+        let group = self.parse_u32()?;
         groups.push(group);
 
         if let Some("\n") = self.peek() {

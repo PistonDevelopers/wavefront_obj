@@ -142,25 +142,22 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn error<A>(&self, msg: String) -> Result<A, ParseError> {
-    Err(ParseError {
+  fn error_raw(&self, msg: String) -> ParseError {
+    ParseError {
       line_number: self.line_number,
       message: msg,
-    })
+    }
+  }
+
+  fn error<A>(&self, msg: String) -> Result<A, ParseError> {
+    Err(self.error_raw(msg))
   }
 
   fn next(&mut self) -> Option<&'a str> {
     let ret = self.lexer.next_str();
-
-    match ret {
-      None => {}
-      Some(ref s) => {
-        if *s == "\n" {
-          self.line_number += 1;
-        }
-      }
+    if let Some("\n") = ret {
+      self.line_number += 1;
     }
-
     ret
   }
 
@@ -174,12 +171,7 @@ impl<'a> Parser<'a> {
 
   /// Possibly skips over some newlines.
   fn zero_or_more_newlines(&mut self) {
-    loop {
-      match self.peek() {
-        None => break,
-        Some("\n") => {}
-        Some(_) => break,
-      }
+    while let Some("\n") = self.peek() {
       self.advance();
     }
   }
@@ -211,62 +203,55 @@ impl<'a> Parser<'a> {
 
   fn parse_f64(&mut self) -> Result<f64, ParseError> {
     match self.next() {
-      None => return self.error("Expected f64 but got end of input.".to_owned()),
-      Some(s) => match lexical::try_parse(&s) {
-        Err(_err) => return self.error(format!("Expected f64 but got {}.", s)),
-        Ok(ret) => Ok(ret),
-      },
+      None => self.error("Expected f64 but got end of input.".to_owned()),
+      Some(s) => {
+        lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
+      }
     }
   }
 
   fn parse_usize(&mut self) -> Result<usize, ParseError> {
     match self.next() {
-      None => return self.error("Expected usize but got end of input.".to_owned()),
-      Some(s) => match lexical::try_parse(&s) {
-        Err(_err) => return self.error(format!("Expected usize but got {}.", s)),
-        Ok(ret) => Ok(ret),
-      },
+      None => self.error("Expected usize but got end of input.".to_owned()),
+      Some(s) => {
+        lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected usize but got {}.", s)))
+      }
     }
   }
 
   fn parse_tag(&mut self, tag: &str) -> Result<(), ParseError> {
     match self.next() {
-      None => return self.error(format!("Expected `{}` but got end of input.", tag)),
-      Some(s) => {
-        if s != tag {
-          return self.error(format!("Expected `{}` but got {}.", tag, s));
-        }
-      }
+      None => self.error(format!("Expected `{}` but got end of input.", tag)),
+      Some(s) if s != tag => self.error(format!("Expected `{}` but got {}.", tag, s)),
+      _ => Ok(()),
     }
-
-    Ok(())
   }
 
   fn parse_color(&mut self) -> Result<Color, ParseError> {
-    let r = try!(self.parse_f64());
-    let g = try!(self.parse_f64());
-    let b = try!(self.parse_f64());
+    let r = self.parse_f64()?;
+    let g = self.parse_f64()?;
+    let b = self.parse_f64()?;
 
     Ok(Color { r: r, g: g, b: b })
   }
 
   fn parse_specular_coefficeint(&mut self) -> Result<f64, ParseError> {
-    try!(self.parse_tag("Ns"));
+    self.parse_tag("Ns")?;
     self.parse_f64()
   }
 
   fn parse_ambient_color(&mut self) -> Result<Color, ParseError> {
-    try!(self.parse_tag("Ka"));
+    self.parse_tag("Ka")?;
     self.parse_color()
   }
 
   fn parse_diffuse_color(&mut self) -> Result<Color, ParseError> {
-    try!(self.parse_tag("Kd"));
+    self.parse_tag("Kd")?;
     self.parse_color()
   }
 
   fn parse_specular_color(&mut self) -> Result<Color, ParseError> {
-    try!(self.parse_tag("Ks"));
+    self.parse_tag("Ks")?;
     self.parse_color()
   }
 
@@ -274,7 +259,7 @@ impl<'a> Parser<'a> {
     if self.peek() != Some("Ke") {
       return Ok(None);
     }
-    try!(self.parse_tag("Ke"));
+    self.parse_tag("Ke")?;
     self.parse_color().map(|c| Some(c))
   }
 
@@ -284,19 +269,19 @@ impl<'a> Parser<'a> {
       _ => return Ok(None),
     }
 
-    try!(self.parse_tag("Ni"));
-    let optical_density = try!(self.parse_f64());
+    self.parse_tag("Ni")?;
+    let optical_density = self.parse_f64()?;
     Ok(Some(optical_density))
   }
 
   fn parse_dissolve(&mut self) -> Result<f64, ParseError> {
-    try!(self.parse_tag("d"));
+    self.parse_tag("d")?;
     self.parse_f64()
   }
 
   fn parse_illumination(&mut self) -> Result<Illumination, ParseError> {
-    try!(self.parse_tag("illum"));
-    match try!(self.parse_usize()) {
+    self.parse_tag("illum")?;
+    match self.parse_usize()? {
       0 => Ok(Illumination::Ambient),
       1 => Ok(Illumination::AmbientDiffuse),
       2 => Ok(Illumination::AmbientDiffuseSpecular),
@@ -310,7 +295,7 @@ impl<'a> Parser<'a> {
       _ => return Ok(None),
     }
 
-    try!(self.parse_tag("map_Kd"));
+    self.parse_tag("map_Kd")?;
     match self.next() {
       None => self.error("Expected texture path but got end of input.".to_owned()),
       Some(s) => Ok(Some(s)),
@@ -318,31 +303,31 @@ impl<'a> Parser<'a> {
   }
 
   fn parse_material(&mut self) -> Result<Material, ParseError> {
-    let name = try!(self.parse_newmtl());
-    try!(self.one_or_more_newlines());
-    let spec_coeff = try!(self.parse_specular_coefficeint());
-    try!(self.one_or_more_newlines());
-    let amb = try!(self.parse_ambient_color());
-    try!(self.one_or_more_newlines());
-    let diff = try!(self.parse_diffuse_color());
-    try!(self.one_or_more_newlines());
-    let spec = try!(self.parse_specular_color());
-    try!(self.one_or_more_newlines());
-    let emit = try!(self.parse_emissive_color());
+    let name = self.parse_newmtl()?;
+    self.one_or_more_newlines()?;
+    let spec_coeff = self.parse_specular_coefficeint()?;
+    self.one_or_more_newlines()?;
+    let amb = self.parse_ambient_color()?;
+    self.one_or_more_newlines()?;
+    let diff = self.parse_diffuse_color()?;
+    self.one_or_more_newlines()?;
+    let spec = self.parse_specular_color()?;
+    self.one_or_more_newlines()?;
+    let emit = self.parse_emissive_color()?;
     if emit.is_some() {
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
-    let optical_density = try!(self.parse_optical_density());
+    let optical_density = self.parse_optical_density()?;
     if optical_density.is_some() {
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
-    let dissolve = try!(self.parse_dissolve());
-    try!(self.one_or_more_newlines());
-    let illum = try!(self.parse_illumination());
-    try!(self.one_or_more_newlines());
-    let uv_map = try!(self.parse_uv_map());
+    let dissolve = self.parse_dissolve()?;
+    self.one_or_more_newlines()?;
+    let illum = self.parse_illumination()?;
+    self.one_or_more_newlines()?;
+    let uv_map = self.parse_uv_map()?;
     if uv_map.is_some() {
-      try!(self.one_or_more_newlines());
+      self.one_or_more_newlines()?;
     }
 
     Ok(Material {
@@ -367,7 +352,7 @@ impl<'a> Parser<'a> {
     loop {
       match self.peek() {
         Some("newmtl") => {
-          ret.push(try!(self.parse_material()));
+          ret.push(self.parse_material()?);
         }
         _ => break,
       }
