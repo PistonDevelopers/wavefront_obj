@@ -255,8 +255,8 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn error<A>(&self, msg: String) -> Result<A, ParseError> {
-    Err(self.error_raw(msg))
+  fn error<A, E>(&self, msg: E) -> Result<A, ParseError> where E: Into<String> {
+    Err(self.error_raw(msg.into()))
   }
 
   fn next(&mut self) -> Option<&'a str> {
@@ -294,6 +294,14 @@ impl<'a> Parser<'a> {
       }
       Err(_) => None,
     }
+  }
+
+  /// Return the number of bytes read since the last lexer state provided as argument.
+  ///
+  /// Return [`None`] if the checkpoint parser is more advanced in the input than the current one —
+  /// i.e. you have likely swapped the parsers, try calling the other way around!
+  fn bytes_consumed(&self, checkpoint: &Self) -> Option<usize> {
+    self.lexer.bytes_consumed(&checkpoint.lexer)
   }
 
   /// Possibly skips over some newlines.
@@ -650,6 +658,9 @@ impl<'a> Parser<'a> {
     loop {
       match self.peek() {
         Some(_) => {
+          // create a checkpoint parser so that we can check if we consumed bytes
+          let checkpoint = self.clone();
+
           result.push(self.parse_object(
             &mut min_vertex_index,
             &mut max_vertex_index,
@@ -658,6 +669,10 @@ impl<'a> Parser<'a> {
             &mut min_normal_index,
             &mut max_normal_index,
           )?);
+
+          if self.bytes_consumed(&checkpoint).unwrap_or(0) == 0 {
+            return self.error("cannot parse corrupted data");
+          }
         }
         None => break,
       }
