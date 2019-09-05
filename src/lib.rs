@@ -3,6 +3,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![deny(unreachable_pub)]
 
 pub use lex::ParseError;
 

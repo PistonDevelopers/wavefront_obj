@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 /// Extensions to orderings.
-pub trait OrderingExt {
+pub(crate) trait OrderingExt {
   /// Lexicographically chains comparisions.
   fn lexico<F: Fn() -> Ordering>(self, f: F) -> Self;
 }

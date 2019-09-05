@@ -20,14 +20,14 @@ fn is_whitespace(c: u8) -> bool {
 }
 
 #[derive(Clone)]
-pub struct Lexer<'a> {
+pub(crate) struct Lexer<'a> {
   bytes: &'a [u8],
   read_pos: usize,
   current_line_number: usize,
 }
 
 impl<'a> Lexer<'a> {
-  pub fn new(input: &'a str) -> Lexer<'a> {
+  pub(crate) fn new(input: &'a str) -> Lexer<'a> {
     Lexer {
       bytes: input.as_bytes(),
       read_pos: 0,
@@ -52,7 +52,7 @@ impl<'a> Lexer<'a> {
   ///
   /// Return [`None`] if the checkpoint parser is more advanced in the input than the current one —
   /// i.e. you have likely swapped the parsers, try calling the other way around!
-  pub fn bytes_consumed(&self, checkpoint: &Self) -> Option<usize> {
+  pub(crate) fn bytes_consumed(&self, checkpoint: &Self) -> Option<usize> {
     if self.read_pos < checkpoint.read_pos {
       None
     } else {
@@ -139,19 +139,19 @@ impl<'a> Lexer<'a> {
 }
 
 #[derive(Clone)]
-pub struct PeekableLexer<'a> {
+pub(crate) struct PeekableLexer<'a> {
   inner: Lexer<'a>,
   peeked: Option<Option<&'a str>>,
 }
 
 impl<'a> PeekableLexer<'a> {
-  pub fn new(lexer: Lexer<'a>) -> Self {
+  pub(crate) fn new(lexer: Lexer<'a>) -> Self {
     Self {
       inner: lexer,
       peeked: None,
     }
   }
-  pub fn next_str(&mut self) -> Option<&'a str> {
+  pub(crate) fn next_str(&mut self) -> Option<&'a str> {
     match self.peeked.take() {
       Some(v) => v,
       None => self
@@ -161,7 +161,7 @@ impl<'a> PeekableLexer<'a> {
     }
   }
 
-  pub fn peek_str(&mut self) -> Option<&'a str> {
+  pub(crate) fn peek_str(&mut self) -> Option<&'a str> {
     match self.peeked {
       Some(v) => v,
       None => {
@@ -180,7 +180,7 @@ impl<'a> PeekableLexer<'a> {
   ///
   /// Return [`None`] if the checkpoint parser is more advanced in the input than the current one —
   /// i.e. you have likely swapped the parsers, try calling the other way around!
-  pub fn bytes_consumed(&self, checkpoint: &Self) -> Option<usize> {
+  pub(crate) fn bytes_consumed(&self, checkpoint: &Self) -> Option<usize> {
     self.inner.bytes_consumed(&checkpoint.inner)
   }
 }
