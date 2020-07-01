@@ -1,4 +1,5 @@
 use std::str;
+use std::fmt;
 
 /// A parsing error, with location information.
 #[derive(Debug, PartialEq)]
@@ -8,6 +9,14 @@ pub struct ParseError {
   /// The error message.
   pub message: String,
 }
+
+impl fmt::Display for ParseError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    write!(f, "parse error (L{}): {}", self.line_number, self.message)
+  }
+}
+
+impl std::error::Error for ParseError {}
 
 #[inline]
 fn is_whitespace_except_newline(c: u8) -> bool {
