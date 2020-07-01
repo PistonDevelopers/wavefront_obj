@@ -1,5 +1,5 @@
-use std::str;
 use std::fmt;
+use std::str;
 
 /// A parsing error, with location information.
 #[derive(Debug, PartialEq)]
