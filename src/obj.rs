@@ -255,7 +255,10 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn error<A, E>(&self, msg: E) -> Result<A, ParseError> where E: Into<String> {
+  fn error<A, E>(&self, msg: E) -> Result<A, ParseError>
+  where
+    E: Into<String>,
+  {
     Err(self.error_raw(msg.into()))
   }
 
@@ -377,7 +380,7 @@ impl<'a> Parser<'a> {
     let y = self.parse_double()?;
     let z = self.parse_double()?;
 
-    Ok(Vertex { x: x, y: y, z: z })
+    Ok(Vertex { x, y, z })
   }
 
   fn parse_tex_vertex(&mut self) -> Result<TVertex, ParseError> {
@@ -387,9 +390,9 @@ impl<'a> Parser<'a> {
     match self.try(Self::parse_double) {
       Some(v) => {
         let w = self.try(Self::parse_double).unwrap_or(0.);
-        Ok(TVertex { u: u, v: v, w: w })
+        Ok(TVertex { u, v, w })
       }
-      None => Ok(TVertex { u: u, v: 0., w: 0. }),
+      None => Ok(TVertex { u, v: 0., w: 0. }),
     }
   }
 
@@ -400,7 +403,7 @@ impl<'a> Parser<'a> {
     let y = self.parse_double()?;
     let z = self.parse_double()?;
 
-    Ok(Normal { x: x, y: y, z: z })
+    Ok(Normal { x, y, z })
   }
 
   fn parse_usemtl(&mut self) -> Result<&'a str, ParseError> {
@@ -581,7 +584,7 @@ impl<'a> Parser<'a> {
 
     result.push(Geometry {
       material_name: current_material.map(|s| s.to_owned()),
-      shapes: shapes,
+      shapes,
     });
 
     Ok(
@@ -638,10 +641,10 @@ impl<'a> Parser<'a> {
 
     Ok(Object {
       name: name.to_owned(),
-      vertices: vertices,
-      tex_vertices: tex_vertices,
-      normals: normals,
-      geometry: geometry,
+      vertices,
+      tex_vertices,
+      normals,
+      geometry,
     })
   }
 
@@ -702,7 +705,7 @@ impl<'a> Parser<'a> {
 
     Ok(ObjSet {
       material_library: material_library.map(|s| s.to_owned()),
-      objects: objects,
+      objects,
     })
   }
 
@@ -935,7 +938,7 @@ f 45 41 44 48"#;
           (0.195089, 0.0, -0.980786),
         ]
         .into_iter()
-        .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+        .map(|(x, y, z)| Vertex { x, y, z })
         .collect(),
         tex_vertices: vec![],
         normals: vec![],
@@ -997,7 +1000,7 @@ f 45 41 44 48"#;
           (-1.0, 1.0, -1.0),
         ]
         .into_iter()
-        .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+        .map(|(x, y, z)| Vertex { x, y, z })
         .collect(),
         tex_vertices: vec![],
         normals: vec![],
@@ -1110,7 +1113,7 @@ f 5/5 1/13 4/14 8/6"#;
         (0.005524, 0.247088),
       ]
       .into_iter()
-      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .map(|(u, v)| TVertex { u, v, w: 0. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {
@@ -1224,7 +1227,7 @@ f 5/5 1/13 4/14 8/6"#;
         (0.005524, 0.247088),
       ]
       .into_iter()
-      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .map(|(u, v)| TVertex { u, v, w: 0. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {
@@ -1327,7 +1330,7 @@ f 5/5 1/13 4/14 8/6"#;
         0.504642, 0.505834, 0.75579, 0.005127, 0.005524,
       ]
       .into_iter()
-      .map(|u| TVertex { u: u, v: 0., w: 0. })
+      .map(|u| TVertex { u, v: 0., w: 0. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {
@@ -1443,7 +1446,7 @@ f 5/5 1/13 4/14 8/6
         (0.005524, 0.247088),
       ]
       .into_iter()
-      .map(|(u, v)| TVertex { u: u, v: v, w: 1. })
+      .map(|(u, v)| TVertex { u, v, w: 1. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {
@@ -1631,7 +1634,7 @@ f 3//32 2//32 4//32
         (-0.195089, -1.000000, -0.980786),
       ]
       .into_iter()
-      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .map(|(x, y, z)| Vertex { x, y, z })
       .collect(),
       tex_vertices: vec![],
       normals: vec![
@@ -1670,7 +1673,7 @@ f 3//32 2//32 4//32
         (0.000000, -1.000000, -0.000000),
       ]
       .into_iter()
-      .map(|(x, y, z)| Normal { x: x, y: y, z: z })
+      .map(|(x, y, z)| Normal { x, y, z })
       .collect(),
       geometry: vec![Geometry {
         material_name: Some("Material.002".to_owned()),
@@ -1874,7 +1877,7 @@ f 21 33 12
         (-0.707107, 0.0, 0.707107),
       ]
       .into_iter()
-      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .map(|(x, y, z)| Vertex { x, y, z })
       .collect(),
       tex_vertices: vec![],
       normals: vec![],
@@ -2012,7 +2015,7 @@ f 5/5 1/13 4/14 8/6
         (-1.0, 1.0, -1.0),
       ]
       .into_iter()
-      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .map(|(x, y, z)| Vertex { x, y, z })
       .collect(),
       tex_vertices: vec![
         (1.004952, 0.498633),
@@ -2031,7 +2034,7 @@ f 5/5 1/13 4/14 8/6
         (0.005524, 0.247088),
       ]
       .into_iter()
-      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .map(|(u, v)| TVertex { u, v, w: 0. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {
@@ -2121,7 +2124,7 @@ f 5/5 1/13 4/14 8/6
         (-1.0, 1.0, -1.0),
       ]
       .into_iter()
-      .map(|(x, y, z)| Vertex { x: x, y: y, z: z })
+      .map(|(x, y, z)| Vertex { x, y, z })
       .collect(),
       tex_vertices: vec![
         (1.004952, 0.498633),
@@ -2140,7 +2143,7 @@ f 5/5 1/13 4/14 8/6
         (0.005524, 0.247088),
       ]
       .into_iter()
-      .map(|(u, v)| TVertex { u: u, v: v, w: 0. })
+      .map(|(u, v)| TVertex { u, v, w: 0. })
       .collect(),
       normals: vec![],
       geometry: vec![Geometry {

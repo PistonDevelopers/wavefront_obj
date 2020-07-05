@@ -232,7 +232,7 @@ impl<'a> Parser<'a> {
     let g = self.parse_f64()?;
     let b = self.parse_f64()?;
 
-    Ok(Color { r: r, g: g, b: b })
+    Ok(Color { r, g, b })
   }
 
   fn parse_specular_coefficeint(&mut self) -> Result<f64, ParseError> {
@@ -337,7 +337,7 @@ impl<'a> Parser<'a> {
       color_diffuse: diff,
       color_specular: spec,
       color_emissive: emit,
-      optical_density: optical_density,
+      optical_density,
       alpha: dissolve,
       illumination: illum,
       uv_map: uv_map.map(|s| s.to_owned()),
