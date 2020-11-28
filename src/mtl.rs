@@ -29,7 +29,13 @@ pub struct Material {
   pub optical_density: Option<f64>,
   pub alpha: f64,
   pub illumination: Illumination,
-  pub uv_map: Option<String>,
+  pub ambient_map: Option<String>,
+  pub diffuse_map: Option<String>,
+  pub specular_map: Option<String>,
+  pub specular_exponent_map: Option<String>,
+  pub dissolve_map: Option<String>,
+  pub decal_map: Option<String>,
+  pub bump_map: Option<String>,
 }
 
 /// How a given material is supposed to be illuminated.
@@ -124,7 +130,12 @@ impl PartialOrd for Material {
         .lexico(|| fuzzy_opt_cmp(self.optical_density, other.optical_density, 0.00001))
         .lexico(|| fuzzy_cmp(self.alpha, other.alpha, 0.00001))
         .lexico(|| self.illumination.cmp(&other.illumination))
-        .lexico(|| self.uv_map.cmp(&other.uv_map)),
+        .lexico(|| self.ambient_map.cmp(&other.ambient_map))
+        .lexico(|| self.diffuse_map.cmp(&other.diffuse_map))
+        .lexico(|| self.specular_map.cmp(&other.specular_map))
+        .lexico(|| self.specular_exponent_map.cmp(&other.specular_exponent_map))
+        .lexico(|| self.dissolve_map.cmp(&other.dissolve_map))
+        .lexico(|| self.bump_map.cmp(&other.bump_map))
     )
   }
 }
@@ -289,13 +300,13 @@ impl<'a> Parser<'a> {
     }
   }
 
-  fn parse_uv_map(&mut self) -> Result<Option<&'a str>, ParseError> {
+  fn parse_map(&mut self, name: &'static str) -> Result<Option<&'a str>, ParseError> {
     match self.peek() {
-      Some("map_Kd") => {}
+      Some(s) => if s != name { return Ok(None) },
       _ => return Ok(None),
     }
 
-    self.parse_tag("map_Kd")?;
+    self.parse_tag(name)?;
     match self.next() {
       None => self.error("Expected texture path but got end of input.".to_owned()),
       Some(s) => Ok(Some(s)),
@@ -325,8 +336,45 @@ impl<'a> Parser<'a> {
     self.one_or_more_newlines()?;
     let illum = self.parse_illumination()?;
     self.one_or_more_newlines()?;
-    let uv_map = self.parse_uv_map()?;
-    if uv_map.is_some() {
+
+    // Parse maps
+    // Color textures
+    let ambient_map = self.parse_map("map_Ka")?;
+    if ambient_map.is_some() {
+      self.one_or_more_newlines()?;
+    }
+    let diffuse_map = self.parse_map("map_Kd")?;
+    if diffuse_map.is_some() {
+      self.one_or_more_newlines()?;
+    }
+    let specular_map = self.parse_map("map_Ks")?;
+    if specular_map.is_some() {
+      self.one_or_more_newlines()?;
+    }
+
+    // Scalar textures
+    let spec_exp_map = self.parse_map("map_Ns")?;
+    if spec_exp_map.is_some() {
+      self.one_or_more_newlines()?;
+    }
+    let dissolve_map = self.parse_map("map_d")?;
+    if dissolve_map.is_some() {
+      self.one_or_more_newlines()?;
+    }
+
+    // Decal (roughness) texture
+    let decal = self.parse_map("decal")?;
+    if decal.is_some() {
+      self.one_or_more_newlines()?;
+    }
+
+    // Bump texture
+    let mut bump = self.parse_map("map_bump")?;
+    if bump.is_none() {
+      // Some implementations use map_bump instead
+      bump = self.parse_map("map_bump")?;
+    }
+    if bump.is_some() {
       self.one_or_more_newlines()?;
     }
 
@@ -340,7 +388,13 @@ impl<'a> Parser<'a> {
       optical_density,
       alpha: dissolve,
       illumination: illum,
-      uv_map: uv_map.map(|s| s.to_owned()),
+      ambient_map: ambient_map.map(|s| s.to_owned()),
+      diffuse_map: diffuse_map.map(|s| s.to_owned()),
+      specular_map: specular_map.map(|s| s.to_owned()),
+      specular_exponent_map: spec_exp_map.map(|s| s.to_owned()),
+      dissolve_map: dissolve_map.map(|s| s.to_owned()),
+      decal_map: decal.map(|s| s.to_owned()),
+      bump_map: bump.map(|s| s.to_owned()),
     })
   }
 
@@ -442,7 +496,13 @@ illum 2"#;
         optical_density: Some(1.0),
         alpha: 1.0,
         illumination: AmbientDiffuseSpecular,
-        uv_map: None,
+        ambient_map: None,
+        diffuse_map: None,
+        specular_map: None,
+        specular_exponent_map: None,
+        dissolve_map: None,
+        decal_map: None,
+        bump_map: None,
       },
       Material {
         name: "None".to_owned(),
@@ -466,7 +526,13 @@ illum 2"#;
         optical_density: None,
         alpha: 1.0,
         illumination: AmbientDiffuseSpecular,
-        uv_map: None,
+        ambient_map: None,
+        diffuse_map: None,
+        specular_map: None,
+        specular_exponent_map: None,
+        dissolve_map: None,
+        decal_map: None,
+        bump_map: None,
       },
     ],
   });
@@ -491,7 +557,13 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd cube-uv-num.png
+map_Ka cube-ambient.png
+map_Kd cube-diff.png
+map_Ks cube-spec-color.png
+map_Ns cube-spec-exp.mps
+map_d cube-alpha.mps
+decal cube-roughness.mps
+map_bump cube-bump.mpb
 "#;
 
   let expected = Ok(MtlSet {
@@ -521,7 +593,73 @@ map_Kd cube-uv-num.png
       optical_density: Some(1.0),
       alpha: 1.0,
       illumination: AmbientDiffuseSpecular,
-      uv_map: Some("cube-uv-num.png".to_owned()),
+      ambient_map: Some("cube-ambient.png".to_owned()),
+      diffuse_map: Some("cube-diff.png".to_owned()),
+      specular_map: Some("cube-spec-color.png".to_owned()),
+      specular_exponent_map: Some("cube-spec-exp.mps".to_owned()),
+      dissolve_map: Some("cube-alpha.mps".to_owned()),
+      decal_map: Some("cube-roughness.mps".to_owned()),
+      bump_map: Some("cube-bump.mpb".to_owned()),
+    }],
+  });
+
+  assert_eq!(parse(test_case), expected);
+}
+
+#[test]
+fn test_missing_maps() {
+  use self::Illumination::AmbientDiffuseSpecular;
+
+  let test_case = r#"
+newmtl Material
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.640000 0.640000 0.640000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Ka ambient.png
+map_Ns spec-exp.mps
+map_d alpha.mps
+map_bump bump.mpb
+"#;
+
+  let expected = Ok(MtlSet {
+    materials: vec![Material {
+      name: "Material".to_owned(),
+      specular_coefficient: 96.078431,
+      color_ambient: Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+      },
+      color_diffuse: Color {
+        r: 0.64,
+        g: 0.64,
+        b: 0.64,
+      },
+      color_specular: Color {
+        r: 0.5,
+        g: 0.5,
+        b: 0.5,
+      },
+      color_emissive: Some(Color {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+      }),
+      optical_density: Some(1.0),
+      alpha: 1.0,
+      illumination: AmbientDiffuseSpecular,
+      ambient_map: Some("ambient.png".to_owned()),
+      diffuse_map: None,
+      specular_map: None,
+      specular_exponent_map: Some("spec-exp.mps".to_owned()),
+      dissolve_map: Some("alpha.mps".to_owned()),
+      decal_map: None,
+      bump_map: Some("bump.mpb".to_owned()),
     }],
   });
 
