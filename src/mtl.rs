@@ -46,6 +46,7 @@ pub enum Illumination {
   Ambient,
   AmbientDiffuse,
   AmbientDiffuseSpecular,
+  ReflectionRayTrace,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -299,6 +300,7 @@ impl<'a> Parser<'a> {
       0 => Ok(Illumination::Ambient),
       1 => Ok(Illumination::AmbientDiffuse),
       2 => Ok(Illumination::AmbientDiffuseSpecular),
+      3 => Ok(Illumination::ReflectionRayTrace),
       n => self.error(format!("Unknown illumination model: {}.", n)),
     }
   }
