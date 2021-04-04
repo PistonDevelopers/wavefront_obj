@@ -220,7 +220,7 @@ impl<'a> Parser<'a> {
     match self.next() {
       None => self.error("Expected f64 but got end of input.".to_owned()),
       Some(s) => {
-        lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
+        lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
       }
     }
   }
@@ -229,7 +229,7 @@ impl<'a> Parser<'a> {
     match self.next() {
       None => self.error("Expected usize but got end of input.".to_owned()),
       Some(s) => {
-        lexical::try_parse(&s).map_err(|_| self.error_raw(format!("Expected usize but got {}.", s)))
+        lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected usize but got {}.", s)))
       }
     }
   }

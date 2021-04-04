@@ -13,7 +13,7 @@ repository  = "https://github.com/PistonDevelopers/wavefront_obj.git"
 homepage    = "https://github.com/PistonDevelopers/wavefront_obj"
 
 [dependencies]
-lexical = "2.1.0"
+lexical = "5.2"
 
 [dev-dependencies]
 proptest = "0.9"
