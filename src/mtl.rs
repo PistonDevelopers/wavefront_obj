@@ -139,7 +139,7 @@ impl PartialOrd for Material {
         .lexico(|| self.dissolve_map.cmp(&other.dissolve_map))
         .lexico(|| self.displacement_map.cmp(&other.displacement_map))
         .lexico(|| self.decal_map.cmp(&other.decal_map))
-        .lexico(|| self.bump_map.cmp(&other.bump_map))
+        .lexico(|| self.bump_map.cmp(&other.bump_map)),
     )
   }
 }
@@ -219,18 +219,18 @@ impl<'a> Parser<'a> {
   fn parse_f64(&mut self) -> Result<f64, ParseError> {
     match self.next() {
       None => self.error("Expected f64 but got end of input.".to_owned()),
-      Some(s) => {
-        lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
-      }
+      Some(s) => s
+        .parse()
+        .map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s))),
     }
   }
 
   fn parse_usize(&mut self) -> Result<usize, ParseError> {
     match self.next() {
       None => self.error("Expected usize but got end of input.".to_owned()),
-      Some(s) => {
-        lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected usize but got {}.", s)))
-      }
+      Some(s) => s
+        .parse()
+        .map_err(|_| self.error_raw(format!("Expected usize but got {}.", s))),
     }
   }
 
@@ -307,7 +307,11 @@ impl<'a> Parser<'a> {
 
   fn parse_map(&mut self, name: &'static str) -> Result<Option<&'a str>, ParseError> {
     match self.peek() {
-      Some(s) => if s != name { return Ok(None) },
+      Some(s) => {
+        if s != name {
+          return Ok(None);
+        }
+      }
       _ => return Ok(None),
     }
 
