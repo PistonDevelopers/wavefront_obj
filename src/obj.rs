@@ -370,7 +370,8 @@ impl<'a> Parser<'a> {
   // I can't think of a good reason to do this except to make testing easier.
   fn parse_double(&mut self) -> Result<f64, ParseError> {
     let s = self.parse_str()?;
-    lexical::parse(s).map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
+    s.parse()
+      .map_err(|_| self.error_raw(format!("Expected f64 but got {}.", s)))
   }
 
   fn parse_vertex(&mut self) -> Result<Vertex, ParseError> {
@@ -413,12 +414,14 @@ impl<'a> Parser<'a> {
 
   #[inline]
   fn parse_isize_from(&self, s: &str) -> Result<isize, ParseError> {
-    lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected isize but got {}.", s)))
+    s.parse()
+      .map_err(|_| self.error_raw(format!("Expected isize but got {}.", s)))
   }
 
   fn parse_u32(&mut self) -> Result<u32, ParseError> {
     let s = self.parse_str()?;
-    lexical::parse(&s).map_err(|_| self.error_raw(format!("Expected u32 but got {}.", s)))
+    s.parse()
+      .map_err(|_| self.error_raw(format!("Expected u32 but got {}.", s)))
   }
 
   fn parse_vtindex(
